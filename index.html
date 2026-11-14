@@ -405,13 +405,14 @@
         <strong class="purple" id="dashboard-tip-average" aria-live="polite"></strong>
     </div>
     <p class="sub">Weekly average from the last 28 days of logged tips.</p>
-    <div class="actions" style="justify-content:flex-start;margin:12px 0">
-        <div><span class="label">This week (Mon–Sun)</span> <strong id="dashboard-tips-week"></strong></div>
-        <div><span class="label">Last week (Mon–Sun)</span> <strong id="dashboard-tips-last-week"></strong></div>
-        <div><span class="label">This month</span> <strong id="dashboard-tips-month"></strong></div>
-        <div><span class="label">Last month</span> <strong id="dashboard-tips-last-month"></strong></div>
+    <div class="actions" id="tip-filters" role="group" aria-label="Filter logged tips" style="justify-content:flex-start;margin:12px 0">
+        <button type="button" class="primary" data-tip-period="all" aria-pressed="true">All tips</button>
+        <button type="button" data-tip-period="week" aria-pressed="false">This week (Mon–Sun) <strong id="dashboard-tips-week"></strong></button>
+        <button type="button" data-tip-period="last-week" aria-pressed="false">Last week (Mon–Sun) <strong id="dashboard-tips-last-week"></strong></button>
+        <button type="button" data-tip-period="month" aria-pressed="false">This month <strong id="dashboard-tips-month"></strong></button>
+        <button type="button" data-tip-period="last-month" aria-pressed="false">Last month <strong id="dashboard-tips-last-month"></strong></button>
     </div>
-    <p class="note" id="dashboard-tips-empty">No tips logged yet.</p>
+    <p class="note" id="dashboard-tips-empty" role="status">No tips logged yet.</p>
     <div class="table-wrap" id="dashboard-tip-history" hidden>
         <table>
             <thead><tr><th scope="col">Date earned</th><th scope="col" class="right">Tips</th><th scope="col" class="right">Actions</th></tr></thead>
@@ -1429,26 +1430,29 @@ const SEED={bills:[
             priorMonday.setDate(priorMonday.getDate()-7);
             const lastWeekStart=budgetDateKey(priorMonday);
             const lastMonthStart=monthKey(new Date(now.getFullYear(),now.getMonth()-1,1))+'-01';
-            let weekCents=0, lastWeekCents=0, monthCents=0, lastMonthCents=0;
-            for(const entry of tips.entries){
-                if(entry.date>today)continue;
-                const cents=Math.round(entry.amount*100);
-                if(entry.date>=weekStart)weekCents+=cents;
-                else if(entry.date>=lastWeekStart)lastWeekCents+=cents;
-                if(entry.date>=monthStart)monthCents+=cents;
-                else if(entry.date>=lastMonthStart)lastMonthCents+=cents;
+            const ranges={
+                week:[weekStart,today],
+                'last-week':[lastWeekStart,weekStart],
+                month:[monthStart,today],
+                'last-month':[lastMonthStart,monthStart],
+            };
+            const rows=tips.entries.map((entry,index)=>({entry,index}));
+            let visible=rows;
+            for(const [period,[start,end]] of Object.entries(ranges)){
+                const matches=rows.filter(({entry})=>entry.date>=start
+                    &&(period.startsWith('last-')?entry.date<end:entry.date<=end));
+                const cents=matches.reduce((sum,{entry})=>sum+Math.round(entry.amount*100),0);
+                $('dashboard-tips-'+period).textContent=money(cents/100);
+                if(tipPeriod===period)visible=matches;
             }
-            $('dashboard-tips-week').textContent=money(weekCents/100);
-            $('dashboard-tips-last-week').textContent=money(lastWeekCents/100);
-            $('dashboard-tips-month').textContent=money(monthCents/100);
-            $('dashboard-tips-last-month').textContent=money(lastMonthCents/100);
             const recent=recentTips(tips,now);
             $('dashboard-tip-average').textContent=recent.length
                 ? money(weeklyTipAverage(recent))+' / week'
                 : 'No tips logged in the last 28 days';
-            $('dashboard-tips-empty').hidden=tips.entries.length>0;
-            $('dashboard-tip-history').hidden=tips.entries.length===0;
-            $('dashboard-tip-rows').innerHTML=tips.entries.map((entry,index)=>({entry,index}))
+            $('dashboard-tips-empty').textContent=tipPeriod==='all'?'No tips logged yet.':'No tips logged for this period.';
+            $('dashboard-tips-empty').hidden=visible.length>0;
+            $('dashboard-tip-history').hidden=visible.length===0;
+            $('dashboard-tip-rows').innerHTML=[...visible]
                 .sort((a,b)=>b.entry.date.localeCompare(a.entry.date))
                 .map(({entry,index})=>`<tr>
                     <td>${safeText(entry.date)}</td><td class="right">${money(entry.amount)}</td>
@@ -1460,7 +1464,18 @@ const SEED={bills:[
                 .join('');
         }
 
-        let editedTip=null;
+        let editedTip=null, tipPeriod='all';
+        $('tip-filters').onclick=e=>{
+            const button=e.target.closest('[data-tip-period]');
+            if(!button)return;
+            tipPeriod=button.dataset.tipPeriod;
+            $('tip-filters').querySelectorAll('[data-tip-period]').forEach(filter=>{
+                const active=filter===button;
+                filter.setAttribute('aria-pressed',String(active));
+                filter.classList.toggle('primary',active);
+            });
+            renderDashboardTips();
+        };
         $('dashboard-tip-rows').onclick=e=>{
             const button=e.target.closest('[data-edit-tip],[data-delete-tip]');
             if(!button)return;
