@@ -1455,7 +1455,10 @@ const SEED={bills:[
             if(tipPeriod==='custom'){
                 visible=rows.filter(({entry})=>entry.date>=tipRange.start&&entry.date<=tipRange.end);
                 const cents=visible.reduce((sum,{entry})=>sum+Math.round(entry.amount*100),0);
-                $('tip-range-total').textContent=tipRange.start+' to '+tipRange.end+' · Total tips '+money(cents/100);
+                const rangeDays=(Date.parse(tipRange.end)-Date.parse(tipRange.start))/86400000+1;
+                const weeklyAverage=Math.round(cents*7/rangeDays)/100;
+                $('tip-range-total').textContent=tipRange.start+' to '+tipRange.end
+                    +' · Total tips '+money(cents/100)+' · Weekly average '+money(weeklyAverage);
             }
             const recent=recentTips(tips,now);
             $('dashboard-tip-average').textContent=recent.length
