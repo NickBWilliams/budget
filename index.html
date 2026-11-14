@@ -399,6 +399,20 @@
 <div id="view-dashboard" class="friendly"><div class="welcome"><div><h2 id="view-title">Just your budget, Nick.</h2><p class="sub" id="scope-note"></p></div><button type="button" class="primary" id="log-tips" hidden>Log Tips</button></div>
 <section class="account-panel glass-panel"><div class="heading"><div><h2>Your accounts</h2><p class="sub" id="account-date"></p></div><div class="actions"><button type="button" onclick="editAccountBalances()">Update balances</button><button type="button" class="primary" onclick="openSavingsTransfer()">Plan savings transfer</button></div></div><div class="account-grid"><div><span class="label">Checking · reported balance</span><strong id="account-checking"></strong></div><div><span class="label">Savings · reported balance</span><strong id="account-savings"></strong></div><div><span class="label">Total across accounts</span><strong id="account-total"></strong></div></div><p class="note" id="account-cushion"></p><div id="transfer-list"></div></section>
 <div class="cards"><div class="card"><div class="label">Monthly income</div><div class="amount purple" id="income-total"></div><a class="cell purple" href="#income-panel">Edit income</a></div><div class="card"><div class="label">Monthly bills</div><div class="amount" id="bills-total"></div><div class="note" id="bill-count"></div></div><div class="card leftover"><div class="label">Left after bills</div><div class="amount green" id="left-total"></div><div class="note">After listed bills & custom entries</div></div></div>
+<section class="panel" id="dashboard-tips" aria-labelledby="dashboard-tips-title" hidden>
+    <div class="heading">
+        <h2 id="dashboard-tips-title">Logged tips</h2>
+        <strong class="purple" id="dashboard-tip-average" aria-live="polite"></strong>
+    </div>
+    <p class="sub">Weekly average from the last 28 days of logged tips.</p>
+    <p class="note" id="dashboard-tips-empty">No tips logged yet.</p>
+    <div class="table-wrap" id="dashboard-tip-history" hidden>
+        <table>
+            <thead><tr><th scope="col">Date earned</th><th scope="col" class="right">Tips</th></tr></thead>
+            <tbody id="dashboard-tip-rows"></tbody>
+        </table>
+    </div>
+</section>
 <div class="plan"><div style="flex:1;width:100%"><strong id="plan-title"></strong><p id="plan-note"></p><div class="bar"><span id="bill-bar"></span></div></div><div><div class="label">Weekly planning room</div><div id="weekly" class="amount purple" style="font-size:26px"></div><div class="note">Monthly leftover × 12 ÷ 52</div></div></div>
 <div class="people" id="people" hidden></div>
 <section class="panel"><div class="heading"><div><h2>Your monthly bills <span class="count" id="visible-count"></span></h2><p class="sub">Tap a bill to edit it. Change who pays whenever you need.</p></div><button class="primary" id="add-bill">+ Add bill</button></div><div class="table-wrap"><table><thead><tr><th>Due</th><th>Bill</th><th class="right">Monthly</th><th>Who pays</th><th><span hidden>Remove</span></th></tr></thead><tbody id="bills"></tbody><tfoot><tr><td colspan="2"><strong>Total in this view</strong></td><td class="right" id="table-total"></td><td colspan="2"></td></tr></tfoot></table></div><p class="note">Split bills are 50/50. Individual views show only that person's share; Together counts the full bill once. Mortgage is $3,149 paid in full on the 1st.</p></section>
@@ -1367,6 +1381,8 @@ const SEED={bills:[
             const view=budgetView,t=totals(view),visible=expenses.filter(b=>billActive(b)).filter(b=>view==='household'||(b.owner||'nick')===view||b.owner==='split').slice().sort((a,b)=>a.day-b.day);
             document.querySelectorAll('[data-view]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.view===view)));
             $('log-tips').hidden=view!=='kiana';
+            $('dashboard-tips').hidden=view!=='kiana';
+            if(view==='kiana')renderDashboardTips();
             $('view-title').textContent=view==='nick'?'Just your budget, Nick.':view==='kiana'?"Kiana's own budget.":'Your household, together.';
             $('scope-note').textContent=view==='nick'?"Your income and assigned bills. Kiana's stay in her own view.":view==='kiana'?"Only Kiana's income and assigned bills.":'Both incomes and all bills, with individual totals below.';
             $('active-scope').textContent=(view==='nick'?'Nick only':view==='kiana'?'Kiana only':'Nick + Kiana')+' · Applies to Panel, Forecast, Vaults, Analytics, Matrix and PDF. Existing unassigned custom entries and vaults belong to Nick.';
@@ -1384,6 +1400,20 @@ const SEED={bills:[
         $('bills').onclick=e=>{const edit=e.target.closest('[data-edit]'),remove=e.target.closest('[data-remove]');if(edit)openBill(edit.dataset.edit);if(remove){const b=expenses.find(b=>b.id===remove.dataset.remove);if(confirm('Remove '+b.name+'?')){expenses.splice(expenses.indexOf(b),1);save();}}};
         $('bills').onchange=e=>{if(e.target.matches('[data-owner]')){expenses.find(b=>b.id===e.target.dataset.owner).owner=e.target.value;save();}};
         $('bill-form').onsubmit=e=>{e.preventDefault();let amt=Number($('bill-amount').value),day=Number($('bill-day').value),name=$('bill-name').value.trim();if(!name||!Number.isFinite(amt)||amt<0||amt>1e7||!Number.isInteger(day)||day<1||day>31)return;const data={id:editingBill??('bill-'+Date.now()+'-'+Math.random().toString(36).slice(2)),name,day,amt,owner:$('bill-owner').value,kind:$('bill-kind').value,startMonth:$('bill-start').value,termMonths:$('bill-months').value?Number($('bill-months').value):null};if(data.termMonths!==null&&(!Number.isInteger(data.termMonths)||data.termMonths<1||data.termMonths>1200||!Number.isFinite(monthNumber(data.startMonth))))return;const i=expenses.findIndex(b=>b.id===editingBill);if(i<0)expenses.push(data);else expenses[i]=data;if(data.kind==='pennie')expenses.forEach(b=>{if(b.id!==data.id&&b.kind==='pennie')b.kind='loan';});save();$('bill-dialog').close();};
+        function renderDashboardTips(){
+            const tips=tipPlan(incomes.find(income=>income.id==='kiana'));
+            const recent=recentTips(tips);
+            $('dashboard-tip-average').textContent=recent.length
+                ? money(weeklyTipAverage(recent))+' / week'
+                : 'No tips logged in the last 28 days';
+            $('dashboard-tips-empty').hidden=tips.entries.length>0;
+            $('dashboard-tip-history').hidden=tips.entries.length===0;
+            $('dashboard-tip-rows').innerHTML=[...tips.entries]
+                .sort((a,b)=>b.date.localeCompare(a.date))
+                .map(entry=>`<tr><td>${safeText(entry.date)}</td><td class="right">${money(entry.amount)}</td></tr>`)
+                .join('');
+        }
+
         function renderTipLog(){
             const entries=recentTips({entries:draftTips});
             $('tips-average').textContent=entries.length
