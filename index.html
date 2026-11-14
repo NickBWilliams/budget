@@ -405,6 +405,10 @@
         <strong class="purple" id="dashboard-tip-average" aria-live="polite"></strong>
     </div>
     <p class="sub">Weekly average from the last 28 days of logged tips.</p>
+    <div class="actions" style="justify-content:flex-start;margin:12px 0">
+        <div><span class="label">This week (Mon–Sun)</span> <strong id="dashboard-tips-week"></strong></div>
+        <div><span class="label">This month</span> <strong id="dashboard-tips-month"></strong></div>
+    </div>
     <p class="note" id="dashboard-tips-empty">No tips logged yet.</p>
     <div class="table-wrap" id="dashboard-tip-history" hidden>
         <table>
@@ -1415,7 +1419,20 @@ const SEED={bills:[
         const kianaIncome=()=>incomes.find(income=>income.id==='kiana');
         function renderDashboardTips(){
             const tips=tipPlan(kianaIncome());
-            const recent=recentTips(tips);
+            const now=new Date(), today=budgetDateKey(now);
+            const monday=new Date(now);
+            monday.setDate(monday.getDate()-(monday.getDay()+6)%7);
+            const weekStart=budgetDateKey(monday), monthStart=monthKey(now)+'-01';
+            let weekCents=0, monthCents=0;
+            for(const entry of tips.entries){
+                if(entry.date>today)continue;
+                const cents=Math.round(entry.amount*100);
+                if(entry.date>=weekStart)weekCents+=cents;
+                if(entry.date>=monthStart)monthCents+=cents;
+            }
+            $('dashboard-tips-week').textContent=money(weekCents/100);
+            $('dashboard-tips-month').textContent=money(monthCents/100);
+            const recent=recentTips(tips,now);
             $('dashboard-tip-average').textContent=recent.length
                 ? money(weeklyTipAverage(recent))+' / week'
                 : 'No tips logged in the last 28 days';
