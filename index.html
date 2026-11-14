@@ -1395,7 +1395,12 @@ const SEED={bills:[
                 remove.type='button';
                 remove.textContent='Remove';
                 remove.setAttribute('aria-label','Remove '+money(entry.amount)+' tip entry for '+entry.date);
-                remove.onclick=()=>{draftTips.splice(index,1);renderTipLog();$('add-tip').focus();};
+                remove.onclick=()=>{
+                    draftTips.splice(index,1);
+                    renderTipLog();
+                    if(loggingTips)$('save-income').textContent='Save changes';
+                    $('tip-amount').focus();
+                };
                 row.append(entry.date+' · '+money(entry.amount)+' ',remove);
                 return row;
             }));
@@ -1410,7 +1415,8 @@ const SEED={bills:[
             $('income-help').hidden=tipsOnly;
             $('tip-settings').hidden=tipsOnly;
             $('tips-estimate').disabled=tipsOnly;
-            $('save-income').textContent=tipsOnly?'Save tips':'Save income';
+            $('add-tip').hidden=tipsOnly;
+            $('save-income').textContent=tipsOnly?'Save tip':'Save income';
             const income=incomes.find(i=>i.id===editingIncome);
             const isKiana=income.id==='kiana';
             $('income-dialog-title').textContent=tipsOnly?'Log Tips':'Edit '+income.name;
@@ -1442,18 +1448,21 @@ const SEED={bills:[
             if(button)openIncome(button.dataset.income);
         };
 
-        $('add-tip').onclick=()=>{
+        function addTipEntry(){
             const date=$('tip-date').value, amount=$('tip-amount').valueAsNumber;
             if(!validBudgetDate(date)||date>$('tip-date').max||!Number.isFinite(amount)||amount<=0||amount>1e7||Math.abs(amount*100-Math.round(amount*100))>1e-6){
                 $('tip-error').textContent='Enter today or an earlier date and a positive tip amount with up to two decimal places.';
-                return;
+                $('tip-amount').focus();
+                return false;
             }
             draftTips.push({date,amount});
             draftTips.sort((a,b)=>b.date.localeCompare(a.date));
             $('tip-amount').value='';
             $('tip-error').textContent='';
-            renderTipLog();
-        };
+            return true;
+        }
+
+        $('add-tip').onclick=()=>{if(addTipEntry())renderTipLog();};
 
         $('income-form').onsubmit=e=>{
             e.preventDefault();
@@ -1461,7 +1470,11 @@ const SEED={bills:[
             if(!loggingTips&&(!Number.isFinite(amount)||amount<0||amount>1e7))return;
             const income=incomes.find(i=>i.id===editingIncome);
             if(income.id==='kiana'){
-                if($('tip-amount').value||$('tip-amount').validity.badInput){
+                const hasPendingTip=$('tip-amount').value||$('tip-amount').validity.badInput;
+                if(loggingTips){
+                    const removedEntry=draftTips.length<tipPlan(income).entries.length;
+                    if((hasPendingTip||!removedEntry)&&!addTipEntry())return;
+                }else if(hasPendingTip){
                     $('tip-error').textContent='Add the tip entry or clear its amount before saving.';
                     $('tip-amount').focus();
                     return;
