@@ -396,7 +396,7 @@
         </div>
     </div>
 
-<div id="view-dashboard" class="friendly"><div class="welcome"><div><h2 id="view-title">Just your budget, Nick.</h2><p class="sub" id="scope-note"></p></div></div>
+<div id="view-dashboard" class="friendly"><div class="welcome"><div><h2 id="view-title">Just your budget, Nick.</h2><p class="sub" id="scope-note"></p></div><button type="button" class="primary" id="log-tips" hidden>Log Tips</button></div>
 <section class="account-panel glass-panel"><div class="heading"><div><h2>Your accounts</h2><p class="sub" id="account-date"></p></div><div class="actions"><button type="button" onclick="editAccountBalances()">Update balances</button><button type="button" class="primary" onclick="openSavingsTransfer()">Plan savings transfer</button></div></div><div class="account-grid"><div><span class="label">Checking · reported balance</span><strong id="account-checking"></strong></div><div><span class="label">Savings · reported balance</span><strong id="account-savings"></strong></div><div><span class="label">Total across accounts</span><strong id="account-total"></strong></div></div><p class="note" id="account-cushion"></p><div id="transfer-list"></div></section>
 <div class="cards"><div class="card"><div class="label">Monthly income</div><div class="amount purple" id="income-total"></div><a class="cell purple" href="#income-panel">Edit income</a></div><div class="card"><div class="label">Monthly bills</div><div class="amount" id="bills-total"></div><div class="note" id="bill-count"></div></div><div class="card leftover"><div class="label">Left after bills</div><div class="amount green" id="left-total"></div><div class="note">After listed bills & custom entries</div></div></div>
 <div class="plan"><div style="flex:1;width:100%"><strong id="plan-title"></strong><p id="plan-note"></p><div class="bar"><span id="bill-bar"></span></div></div><div><div class="label">Weekly planning room</div><div id="weekly" class="amount purple" style="font-size:26px"></div><div class="note">Monthly leftover × 12 ÷ 52</div></div></div>
@@ -500,10 +500,10 @@
 <dialog id="account-dialog"><form id="account-form"><h2>Update account balances</h2><label class="field">Checking balance ($)<input id="checking-input" type="number" step="0.01" required></label><label class="field">Savings balance ($)<input id="savings-input" type="number" min="0" step="0.01" required></label><label class="field">Balances as of<input id="account-asof" type="date" required></label><p class="note">Enter the balances already showing at your bank. Forecast applies later scheduled activity. Plans on this date are treated as additional moves after this snapshot.</p><div class="dialog-actions"><button type="button" onclick="document.getElementById('account-dialog').close()">Cancel</button><button class="primary">Save balances</button></div></form></dialog>
 <dialog id="transfer-dialog"><form id="transfer-form"><h2>Plan savings → checking</h2><p class="note">This is a forecast only. It does not move money at your bank or count as new income. Reported balances stay unchanged.</p><label class="field">Transfer amount ($)<input id="transfer-amount" type="number" min="0.01" step="0.01" required></label><label class="field">Planned date<input id="transfer-date" type="date" required></label><p class="note" id="transfer-available"></p><p id="transfer-error" role="alert" class="negative"></p><div class="dialog-actions"><button type="button" onclick="document.getElementById('transfer-dialog').close()">Cancel</button><button class="primary">Add to forecast</button></div></form></dialog>
 <dialog id="bill-dialog"><form id="bill-form"><h2 id="dialog-title">Edit bill</h2><label class="field">Bill name<input id="bill-name" required maxlength="100"></label><label class="field">Due day<input id="bill-day" type="number" min="1" max="31" required></label><label class="field">Full monthly amount ($)<input id="bill-amount" type="number" min="0" max="10000000" step="0.01" required></label><label class="field">Who pays<select id="bill-owner"><option value="nick">Nick</option><option value="kiana">Kiana</option><option value="split">Split 50/50</option></select></label><label class="field">Payment type<select id="bill-kind"><option value="regular">Ongoing bill</option><option value="settled">Settled payment</option><option value="pennie">Pennie Loan</option><option value="loan">Other loan / fixed term</option></select></label><div id="term-fields"><label class="field">First payment month<input id="bill-start" type="month" min="2000-01" max="2100-12"></label><label class="field">Number of monthly payments<input id="bill-months" type="number" min="1" max="1200" step="1" placeholder="e.g. 12"></label><p class="note" id="term-preview">Leave the month count blank until you know it. The bill will stay active.</p></div><div class="dialog-actions"><button type="button" id="cancel-bill">Cancel</button><button class="primary">Save bill</button></div></form></dialog>
-<dialog id="income-dialog" style="max-height:85vh;overflow:auto"><form id="income-form"><h2 id="income-dialog-title">Edit income</h2><label class="field"><span id="income-amount-label">Amount per payment ($)</span><input id="income-amount" type="number" min="0" max="10000000" step="0.01" required></label><p class="note" id="income-help"></p>
+<dialog id="income-dialog" style="max-height:85vh;overflow:auto"><form id="income-form"><h2 id="income-dialog-title">Edit income</h2><label class="field" id="income-pay-field"><span id="income-amount-label">Amount per payment ($)</span><input id="income-amount" type="number" min="0" max="10000000" step="0.01" required></label><p class="note" id="income-help"></p>
 <div id="tips-editor" hidden>
-    <label class="field">Estimated weekly tips ($)<input id="tips-estimate" type="number" min="0" max="10000000" step="0.01"></label>
-    <label class="field">Tips used in the budget<select id="tips-method"><option value="estimate">Weekly estimate</option><option value="average">Average from tip log</option></select></label>
+    <div id="tip-settings"><label class="field">Estimated weekly tips ($)<input id="tips-estimate" type="number" min="0" max="10000000" step="0.01"></label>
+    <label class="field">Tips used in the budget<select id="tips-method"><option value="estimate">Weekly estimate</option><option value="average">Average from tip log</option></select></label></div>
     <h3>Tip log</h3>
     <p class="note" id="tips-average" aria-live="polite"></p>
     <label class="field">Date earned<input id="tip-date" type="date"></label>
@@ -511,8 +511,7 @@
     <button type="button" id="add-tip">Add tip entry</button>
     <p class="note" id="tip-error" role="status"></p>
     <ul id="tip-entries"></ul>
-    <p class="note">Save income to keep your changes.</p>
-</div><div class="dialog-actions"><button type="button" id="cancel-income">Cancel</button><button class="primary">Save income</button></div></form></dialog>
+</div><div class="dialog-actions"><button type="button" id="cancel-income">Cancel</button><button class="primary" id="save-income">Save income</button></div></form></dialog>
 
 <script>
     // Init Date Readout
@@ -1360,13 +1359,14 @@ const SEED={bills:[
 
         (()=>{
         const $=id=>document.getElementById(id),money=n=>new Intl.NumberFormat('en-US',{style:'currency',currency:'USD',maximumFractionDigits:2,minimumFractionDigits:0}).format(n);
-        let editingBill=null,editingIncome=null,draftTips=null;
+        let editingBill=null,editingIncome=null,draftTips=null,loggingTips=false;
         const totals=v=>{let income=incomes.filter(i=>v==='household'||i.owner===v).reduce((s,i)=>s+plannedIncome(i)*i.multiplier,0),bills=expenses.filter(b=>billActive(b)).reduce((s,b)=>s+shareAmount(b,v),0),custom=customLedger.filter(c=>c.date.slice(0,7)===budgetMonth&&(v==='household'||(c.owner||'nick')===v)).reduce((s,c)=>s+c.amt,0);return{income,bills,custom,left:income-bills-custom};};
         function setView(v){if(!isSandbox){scopeBalances[budgetView]=startBal;} budgetView=v;startBal=scopeBalances[v];runEngine();}
         window.renderFront=()=>{
             renderAccounts();
             const view=budgetView,t=totals(view),visible=expenses.filter(b=>billActive(b)).filter(b=>view==='household'||(b.owner||'nick')===view||b.owner==='split').slice().sort((a,b)=>a.day-b.day);
             document.querySelectorAll('[data-view]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.view===view)));
+            $('log-tips').hidden=view!=='kiana';
             $('view-title').textContent=view==='nick'?'Just your budget, Nick.':view==='kiana'?"Kiana's own budget.":'Your household, together.';
             $('scope-note').textContent=view==='nick'?"Your income and assigned bills. Kiana's stay in her own view.":view==='kiana'?"Only Kiana's income and assigned bills.":'Both incomes and all bills, with individual totals below.';
             $('active-scope').textContent=(view==='nick'?'Nick only':view==='kiana'?'Kiana only':'Nick + Kiana')+' · Applies to Panel, Forecast, Vaults, Analytics, Matrix and PDF. Existing unassigned custom entries and vaults belong to Nick.';
@@ -1401,14 +1401,19 @@ const SEED={bills:[
             }));
         }
 
-        $('incomes').onclick=e=>{
-            const button=e.target.closest('[data-income]');
-            if(!button)return;
-            document.getElementById("income-form").reset();
-            editingIncome=button.dataset.income;
+        function openIncome(id, tipsOnly=false){
+            $('income-form').reset();
+            editingIncome=id;
+            loggingTips=tipsOnly;
+            $('income-pay-field').hidden=tipsOnly;
+            $('income-amount').disabled=tipsOnly;
+            $('income-help').hidden=tipsOnly;
+            $('tip-settings').hidden=tipsOnly;
+            $('tips-estimate').disabled=tipsOnly;
+            $('save-income').textContent=tipsOnly?'Save tips':'Save income';
             const income=incomes.find(i=>i.id===editingIncome);
             const isKiana=income.id==='kiana';
-            $('income-dialog-title').textContent='Edit '+income.name;
+            $('income-dialog-title').textContent=tipsOnly?'Log Tips':'Edit '+income.name;
             $('income-amount-label').textContent=isKiana?'Regular weekly take-home pay ($)':'Amount per payment ($)';
             $('income-amount').value=income.amt;
             $('income-help').textContent=isKiana
@@ -1428,6 +1433,13 @@ const SEED={bills:[
                 renderTipLog();
             }
             $('income-dialog').showModal();
+            if(tipsOnly)$('tip-amount').focus();
+        }
+
+        $('log-tips').onclick=()=>openIncome('kiana',true);
+        $('incomes').onclick=e=>{
+            const button=e.target.closest('[data-income]');
+            if(button)openIncome(button.dataset.income);
         };
 
         $('add-tip').onclick=()=>{
@@ -1446,7 +1458,7 @@ const SEED={bills:[
         $('income-form').onsubmit=e=>{
             e.preventDefault();
             const amount=$('income-amount').valueAsNumber;
-            if(!Number.isFinite(amount)||amount<0||amount>1e7)return;
+            if(!loggingTips&&(!Number.isFinite(amount)||amount<0||amount>1e7))return;
             const income=incomes.find(i=>i.id===editingIncome);
             if(income.id==='kiana'){
                 if($('tip-amount').value||$('tip-amount').validity.badInput){
@@ -1454,9 +1466,11 @@ const SEED={bills:[
                     $('tip-amount').focus();
                     return;
                 }
-                income.tips={estimate:Number($('tips-estimate').value),method:$('tips-method').value,entries:draftTips};
+                income.tips=loggingTips
+                    ? {...tipPlan(income),entries:draftTips}
+                    : {estimate:Number($('tips-estimate').value),method:$('tips-method').value,entries:draftTips};
             }
-            income.amt=amount;
+            if(!loggingTips)income.amt=amount;
             save();
             $('income-dialog').close();
         };
