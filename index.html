@@ -407,6 +407,39 @@
     .workspace-inactive:not([hidden]){display:block}
     #dashboard-tip-history,#monthly-bills .table-wrap{max-height:none;overflow:visible}
 }
+
+.planner-page{padding:8px 0 18px}
+.planner-page .column-title{font-size:17px;text-transform:none;letter-spacing:0;margin:0 0 10px}
+.planner-page .column-title::before{display:none}
+.forecast-toolbar{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:8px}
+.forecast-toolbar .column-title{margin:0}
+.forecast-toolbar .actions{display:flex;gap:4px}
+.forecast-toolbar button,.forecast-toolbar select{min-height:40px;border:1px solid var(--border);border-radius:8px;background:#fff;padding:5px 10px}
+.forecast-toolbar button:disabled{opacity:.4;cursor:default}
+.forecast-snapshot,.pennie-link{padding:10px 14px;margin:0 0 10px}
+.planner-page summary{cursor:pointer;font-weight:650}
+.planner-page .month-header-strip{padding:10px 14px;margin:0 0 6px}
+.planner-page .month-title{font-size:16px}
+.planner-page .calendar-wrapper{padding-bottom:6px}
+.planner-page .calendar-grid{grid-template-columns:repeat(7,minmax(0,1fr));min-width:650px;gap:4px}
+.planner-page .cal-day{min-height:54px;padding:5px;border-radius:8px}
+.planner-page .cal-header,.planner-page .cal-num{font-size:11px;margin-bottom:3px;padding-bottom:0}
+.planner-page .event{padding:2px 4px;margin-bottom:2px;overflow-wrap:anywhere}
+.planner-page .cal-bal{font-size:12px}
+.planner-page .chart-wrapper{height:clamp(260px,52vh,440px);padding:10px}
+.planner-page .account-panel,.planner-page .vault-card{padding:12px 14px;margin-bottom:8px}
+.planner-page .vault-grid,.planner-page .debt-plans{gap:8px}
+.vault-help{font-size:13px;margin-bottom:10px}
+.planner-page .debt-summary{margin:8px 0}
+.planner-page .debt-summary>div,.planner-page .debt-plan{padding:10px 12px}
+.planner-page .debt-plan h3,.debt-payment{margin:5px 0}
+.planner-page .debt-plan button{margin-top:8px}
+.planner-page .pennie-link{margin-top:10px}
+.planner-page #pennie-model{padding:14px!important}
+@media(max-width:768px){
+    .planner-page{margin-inline:9px}
+    .planner-page .chart-wrapper{height:320px}
+}
 </style>
 </head>
 <body>
@@ -556,31 +589,39 @@
                 <table style="margin-top: 10px;">
                     <tbody id="custom-ledger-list"></tbody>
                 </table></section></div>
-    <div id="view-calendar" class="hidden">
-        <div class="glass-panel" style="padding:20px;margin-bottom:20px"><strong>Checking balance snapshot</strong><p class="note" id="forecast-anchor-note">Forecast starts after your reported balance date, so earlier bills and income are not charged again. Savings stays separate unless you plan a transfer.</p><button class="btn btn-primary" onclick="editStartBal()">Update balances</button><span id="forecast-opening" style="margin-left:15px"></span></div><div id="calendar-body"></div>
+    <div id="view-calendar" class="planner-page hidden">
+        <div class="forecast-toolbar">
+            <h2 class="column-title">Forecast</h2>
+            <div class="actions">
+                <button type="button" id="forecast-prev" aria-label="Previous forecast month">‹</button>
+                <select id="forecast-month" aria-label="Forecast month"></select>
+                <button type="button" id="forecast-next" aria-label="Next forecast month">›</button>
+            </div>
+        </div>
+        <details class="glass-panel forecast-snapshot"><summary>Checking balance snapshot</summary><p class="note" id="forecast-anchor-note">Forecast starts after your reported balance date, so earlier bills and income are not charged again. Savings stays separate unless you plan a transfer.</p><button class="btn btn-primary" onclick="editStartBal()">Update balances</button><span id="forecast-opening" style="margin-left:15px"></span></details><div id="calendar-body"></div>
     </div>
 
-    <div id="view-vault" class="hidden">
+    <div id="view-vault" class="planner-page hidden">
         <div class="column-title">Savings goals & vaults</div><div id="vault-account-summary" class="account-panel glass-panel"></div>
-        <div style="margin-bottom: 25px; font-size: 0.95rem; color: var(--text-sub); line-height: 1.5;">
+        <details class="vault-help"><summary>How to add to a vault</summary>
             Protect your surplus. Inject a custom transaction named <strong>"Vault: Emergency Fund"</strong> on the Dashboard to secure cash here. <br><strong style="color: var(--primary)">Click any vault below to edit its target or delete it.</strong>
-        </div>
+        </details>
         <div class="vault-grid" id="vault-list"></div>
     </div>
 
-    <div id="view-chart" class="hidden">
+    <div id="view-chart" class="planner-page hidden">
         <div class="column-title">Balance & debt forecast</div>
         <p style="font-size: 0.85rem; color: var(--text-sub); margin-top: -10px; margin-bottom: 15px;">
-            Dashed Orange Line represents your $4,000 Danger Zone floor.
+            The orange line marks the $4,000 forecast threshold.
         </p>
         <div class="chart-wrapper glass-panel">
             <canvas id="balanceChart"></canvas>
         </div>
     </div>
 
-    <div id="view-debt" class="hidden">
+    <div id="view-debt" class="planner-page hidden">
         <div class="column-title">Debt & payoff tracker</div><p class="scope-note">Set a start month and number of monthly payments for each debt. The final month is included. After that, the expense stops and the record stays here. These are scheduled estimates, not confirmations from your lender.</p><div id="debt-summary" class="debt-summary"></div><div id="debt-plans" class="debt-plans"></div>
-<div class="glass-panel pennie-link" style="padding:24px;margin:22px 0"><h2 style="font-size:18px;margin-top:0">Pennie Loan</h2><p class="scope-note">Link Pennie to its existing bill so it is counted once. Or add a separate Pennie bill if it is not already in the screenshot.</p><label for="pennie-link">Existing monthly bill</label><select id="pennie-link"></select><button id="link-pennie" class="btn btn-primary">Link selected bill</button><button id="add-pennie" class="btn">Add separate Pennie bill</button><p id="pennie-link-note" class="note"></p></div>
+<details class="glass-panel pennie-link"><summary>Pennie Loan setup</summary><p class="scope-note">Link Pennie to its existing bill so it is counted once. Or add a separate Pennie bill if it is not already in the screenshot.</p><label for="pennie-link">Existing monthly bill</label><select id="pennie-link"></select><button id="link-pennie" class="btn btn-primary">Link selected bill</button><button id="add-pennie" class="btn">Add separate Pennie bill</button><p id="pennie-link-note" class="note"></p></details>
         
         <div id="pennie-model" class="debt-card glass-panel" style="border-top: 5px solid var(--primary); margin-bottom: 25px; padding: 30px;">
             <div class="debt-header-wrap">
@@ -1044,15 +1085,33 @@ const SEED={bills:[
         return n + (s[(v - 20) % 10] || s[v] || s[0]);
     }
 
-    let forecastMarkup='';
+    let forecastMonths=[];
+    let selectedForecastMonth=0;
+    let forecastPlanningMonth='';
     let forecastNeedsRender=false;
     let chartNeedsUpdate=false;
 
     function renderForecastCalendar(){
         if(!forecastNeedsRender)return;
-        document.getElementById('calendar-body').innerHTML=forecastMarkup;
+        const monthPicker=document.getElementById('forecast-month');
+        monthPicker.replaceChildren(...forecastMonths.map(({label},index)=>new Option(label,index)));
+        showForecastMonth(selectedForecastMonth);
         forecastNeedsRender=false;
     }
+
+    function showForecastMonth(index){
+        const month=forecastMonths[index];
+        if(!month)return;
+        selectedForecastMonth=index;
+        document.getElementById('forecast-month').value=String(index);
+        document.getElementById('forecast-prev').disabled=index===0;
+        document.getElementById('forecast-next').disabled=index===forecastMonths.length-1;
+        document.getElementById('calendar-body').innerHTML=month.markup;
+    }
+
+    document.getElementById('forecast-month').onchange=e=>showForecastMonth(Number(e.target.value));
+    document.getElementById('forecast-prev').onclick=()=>showForecastMonth(selectedForecastMonth-1);
+    document.getElementById('forecast-next').onclick=()=>showForecastMonth(selectedForecastMonth+1);
 
     function refreshChart(){
         if(!chartInstance){initChart();return;}
@@ -1313,7 +1372,6 @@ const SEED={bills:[
         
         let minGlobalBalance = Infinity; let minGlobalDate = "";
 
-        let calHtml = "";
         
         function generateMonth(monthPrefix, monthNum, yearNum) {
             const expenses=scopedExpenses(yearNum+'-'+String(monthNum).padStart(2,'0'));
@@ -1450,8 +1508,16 @@ const SEED={bills:[
 
         const mNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
         let cMo=Number(budgetMonth.slice(5)),cYr=Number(budgetMonth.slice(0,4)); 
-        for (let m = 0; m < 12; m++) { calHtml += generateMonth(mNames[cMo - 1], cMo, cYr); cMo++; if (cMo > 12) { cMo = 1; cYr++; } }
-        forecastMarkup=calHtml;
+        if(forecastPlanningMonth!==budgetMonth){
+            forecastPlanningMonth=budgetMonth;
+            selectedForecastMonth=0;
+        }
+        forecastMonths=[];
+        for(let m=0;m<12;m++){
+            const month=mNames[cMo-1];
+            forecastMonths.push({label:month+' '+cYr,markup:generateMonth(month,cMo,cYr)});
+            if(++cMo>12){cMo=1;cYr++;}
+        }
         forecastNeedsRender=true;
         if(!document.getElementById('view-calendar').classList.contains('hidden'))renderForecastCalendar();
 
@@ -1836,7 +1902,7 @@ const SEED={bills:[
             const final=configured?addMonths(b.startMonth,b.termMonths-1):'Not set';
             const label=status==='finished'?'Paid off · scheduled':status==='needs-term'?'Set duration':status==='upcoming'?'Starts later':'In progress';
             const name=b.kind==='pennie'?'Pennie Loan':b.name;
-            return `<article class="debt-plan ${status==='finished'?'finished':''}"><span class="badge">${label}</span><h3>${safeText(name)}</h3>${b.kind==='pennie'&&b.name!=='Pennie Loan'?'<p class="note">Linked to '+safeText(b.name)+' · counted once</p>':''}<dl><dt>Your monthly payment</dt><dd>${money(shareAmount(b))}</dd><dt>First payment</dt><dd>${configured?safeText(b.startMonth):'Not set'}</dd><dt>Final payment</dt><dd>${final}</dd><dt>Payments remaining</dt><dd>${remaining===null?'Not set':remaining}</dd><dt>Scheduled amount remaining</dt><dd>${remaining===null?'Not set':money(remaining*shareAmount(b))}</dd></dl>${configured?'<div class="progress"><span style="width:'+elapsed/b.termMonths*100+'%"></span></div>':''}<p class="note">${status==='finished'?'Removed from expenses after '+final+'. Your history is kept.':status==='needs-term'?'Keeps counting as an expense until you set its month count.':'Includes the selected month when a payment is due. Schedule totals assume each payment is made.'}</p><button data-debt-edit="${safeText(b.id)}">${configured?'Edit schedule':'Set payment months'}</button></article>`;
+            return `<article class="debt-plan ${status==='finished'?'finished':''}"><span class="badge">${label}</span><h3>${safeText(name)}</h3>${b.kind==='pennie'&&b.name!=='Pennie Loan'?'<p class="note">Linked to '+safeText(b.name)+' · counted once</p>':''}<p class="debt-payment">${money(shareAmount(b))} / month</p><details><summary>Schedule details</summary><dl><dt>First payment</dt><dd>${configured?safeText(b.startMonth):'Not set'}</dd><dt>Final payment</dt><dd>${final}</dd><dt>Payments remaining</dt><dd>${remaining===null?'Not set':remaining}</dd><dt>Scheduled amount remaining</dt><dd>${remaining===null?'Not set':money(remaining*shareAmount(b))}</dd></dl>${configured?'<div class="progress"><span style="width:'+elapsed/b.termMonths*100+'%"></span></div>':''}<p class="note">${status==='finished'?'Removed from expenses after '+final+'. Your history is kept.':status==='needs-term'?'Keeps counting as an expense until you set its month count.':'Includes the selected month when a payment is due. Schedule totals assume each payment is made.'}</p></details><button data-debt-edit="${safeText(b.id)}">${configured?'Edit schedule':'Set payment months'}</button></article>`;
         }).join('')||'<div class="glass-panel" style="padding:22px">No debt payments assigned in this view.</div>';
         const linked=expenses.find(b=>b.kind==='pennie');
         document.getElementById('pennie-link').innerHTML='<option value="">Choose the existing Pennie bill…</option>'+expenses.filter(b=>(b.owner||'nick')==='nick'||b.owner==='split').map(b=>`<option value="${safeText(b.id)}" ${linked&&linked.id===b.id?'selected':''}>${safeText(b.name)} · ${money(b.amt)}/mo</option>`).join('');
