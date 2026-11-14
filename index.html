@@ -398,7 +398,7 @@
 
 <div id="view-dashboard" class="friendly"><div class="welcome"><div><h2 id="view-title">Just your budget, Nick.</h2><p class="sub" id="scope-note"></p></div><button type="button" class="primary" id="log-tips" hidden>Log Tips</button></div>
 <section class="account-panel glass-panel"><div class="heading"><div><h2>Your accounts</h2><p class="sub" id="account-date"></p></div><div class="actions"><button type="button" onclick="editAccountBalances()">Update balances</button><button type="button" class="primary" onclick="openSavingsTransfer()">Plan savings transfer</button></div></div><div class="account-grid"><div><span class="label">Checking · reported balance</span><strong id="account-checking"></strong></div><div><span class="label">Savings · reported balance</span><strong id="account-savings"></strong></div><div><span class="label">Total across accounts</span><strong id="account-total"></strong></div></div><p class="note" id="account-cushion"></p><div id="transfer-list"></div></section>
-<div class="cards"><div class="card"><div class="label">Monthly income</div><div class="amount purple" id="income-total"></div><a class="cell purple" href="#income-panel">Edit income</a></div><div class="card"><div class="label">Monthly bills</div><div class="amount" id="bills-total"></div><div class="note" id="bill-count"></div></div><div class="card leftover"><div class="label">Left after bills</div><div class="amount green" id="left-total"></div><div class="note">After listed bills & custom entries</div></div></div>
+<div class="cards"><div class="card"><div class="label">Monthly income</div><div class="amount purple" id="income-total"></div><button type="button" class="cell purple" id="edit-income-shortcut">Edit income</button></div><div class="card"><div class="label">Monthly bills</div><div class="amount" id="bills-total"></div><div class="note" id="bill-count"></div></div><div class="card leftover"><div class="label">Left after bills</div><div class="amount green" id="left-total"></div><div class="note">After listed bills & custom entries</div></div></div>
 <section class="panel" id="dashboard-tips" aria-labelledby="dashboard-tips-title" hidden>
     <div class="heading">
         <h2 id="dashboard-tips-title">Logged tips</h2>
@@ -431,7 +431,7 @@
 <section class="panel"><div class="heading"><div><h2>Your monthly bills <span class="count" id="visible-count"></span></h2><p class="sub">Tap a bill to edit it. Change who pays whenever you need.</p></div><button class="primary" id="add-bill">+ Add bill</button></div><div class="table-wrap"><table><thead><tr><th>Due</th><th>Bill</th><th class="right">Monthly</th><th>Who pays</th><th><span hidden>Remove</span></th></tr></thead><tbody id="bills"></tbody><tfoot><tr><td colspan="2"><strong>Total in this view</strong></td><td class="right" id="table-total"></td><td colspan="2"></td></tr></tfoot></table></div><p class="note">Split bills are 50/50. Individual views show only that person's share; Together counts the full bill once. Mortgage is $3,149 paid in full on the 1st.</p></section>
 <section class="panel" id="income-panel" tabindex="-1"><div class="heading"><div><h2>Money coming in</h2></div><span class="save-status" id="save-status">Changes save on this device</span></div><div class="table-wrap"><table><thead><tr><th>Source</th><th>Pay schedule</th><th class="right">Per payment</th><th class="right">Monthly plan</th><th class="right">Actions</th></tr></thead><tbody id="incomes"></tbody></table></div></section>
  <section class="panel"><h2>Custom transactions & savings</h2><p class="note">Entries follow the selected person across Forecast, Vaults, Analytics and Matrix. Together includes both.</p>                <h4 style="margin-top: 30px; color:var(--primary); padding-top:20px; border-top: 2px solid var(--border-light); font-size: 0.95rem; text-transform: uppercase;">Custom transactions</h4>
-                <div style="font-size: 0.85rem; color: var(--text-sub); margin-bottom: 15px;">Name transaction <strong style="color:var(--danger)">"Pennie Extra"</strong> for debt, or <strong style="color:var(--success)">"Vault: [Name]"</strong> for savings!</div>
+                <div id="transaction-name-note" style="font-size: 0.85rem; color: var(--text-sub); margin-bottom: 15px;">Name transaction <strong style="color:var(--danger)">"Pennie Extra"</strong> for debt, or <strong style="color:var(--success)">"Vault: [Name]"</strong> for savings!</div>
                 
                 <div class="form-row">
                     <input type="date" id="cust-date" required>
@@ -538,6 +538,11 @@
             <button class="primary">Save tip</button>
         </div>
     </form>
+</dialog>
+<dialog id="income-source-dialog" aria-labelledby="income-source-title">
+    <h2 id="income-source-title">Choose income to edit</h2>
+    <div class="actions" id="income-source-options"></div>
+    <div class="dialog-actions"><button type="button" id="cancel-income-source">Cancel</button></div>
 </dialog>
 <dialog id="income-dialog" style="max-height:85vh;overflow:auto"><form id="income-form"><h2 id="income-dialog-title">Edit income</h2><label class="field" id="income-pay-field"><span id="income-amount-label">Amount per payment ($)</span><input id="income-amount" type="number" min="0" max="10000000" step="0.01" required></label><p class="note" id="income-help"></p>
 <div id="tips-editor" hidden>
@@ -1406,6 +1411,7 @@ const SEED={bills:[
             const view=budgetView,t=totals(view),visible=expenses.filter(b=>billActive(b)).filter(b=>view==='household'||(b.owner||'nick')===view||b.owner==='split').slice().sort((a,b)=>a.day-b.day);
             document.querySelectorAll('[data-view]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.view===view)));
             $('log-tips').hidden=view!=='kiana';
+            $('transaction-name-note').hidden=view==='kiana';
             $('dashboard-tips').hidden=view!=='kiana';
             if(view==='kiana')renderDashboardTips();
             $('view-title').textContent=view==='nick'?'Just your budget, Nick.':view==='kiana'?"Kiana's own budget.":'Your household, together.';
@@ -1607,6 +1613,25 @@ const SEED={bills:[
             if(tipsOnly)$('tip-amount').focus();
         }
 
+        $('edit-income-shortcut').onclick=()=>{
+            const sources=scopedIncomes();
+            if(sources.length===1){
+                openIncome(sources[0].id);
+                return;
+            }
+            $('income-source-options').replaceChildren(...sources.map(income=>{
+                const button=document.createElement('button');
+                button.type='button';
+                button.textContent=income.name;
+                button.onclick=()=>{
+                    $('income-source-dialog').close();
+                    openIncome(income.id);
+                };
+                return button;
+            }));
+            $('income-source-dialog').showModal();
+        };
+        $('cancel-income-source').onclick=()=>$('income-source-dialog').close();
         $('log-tips').onclick=()=>openIncome('kiana',true);
         $('incomes').onclick=e=>{
             const button=e.target.closest('[data-income]');
