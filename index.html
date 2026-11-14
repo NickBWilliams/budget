@@ -500,7 +500,19 @@
 <dialog id="account-dialog"><form id="account-form"><h2>Update account balances</h2><label class="field">Checking balance ($)<input id="checking-input" type="number" step="0.01" required></label><label class="field">Savings balance ($)<input id="savings-input" type="number" min="0" step="0.01" required></label><label class="field">Balances as of<input id="account-asof" type="date" required></label><p class="note">Enter the balances already showing at your bank. Forecast applies later scheduled activity. Plans on this date are treated as additional moves after this snapshot.</p><div class="dialog-actions"><button type="button" onclick="document.getElementById('account-dialog').close()">Cancel</button><button class="primary">Save balances</button></div></form></dialog>
 <dialog id="transfer-dialog"><form id="transfer-form"><h2>Plan savings → checking</h2><p class="note">This is a forecast only. It does not move money at your bank or count as new income. Reported balances stay unchanged.</p><label class="field">Transfer amount ($)<input id="transfer-amount" type="number" min="0.01" step="0.01" required></label><label class="field">Planned date<input id="transfer-date" type="date" required></label><p class="note" id="transfer-available"></p><p id="transfer-error" role="alert" class="negative"></p><div class="dialog-actions"><button type="button" onclick="document.getElementById('transfer-dialog').close()">Cancel</button><button class="primary">Add to forecast</button></div></form></dialog>
 <dialog id="bill-dialog"><form id="bill-form"><h2 id="dialog-title">Edit bill</h2><label class="field">Bill name<input id="bill-name" required maxlength="100"></label><label class="field">Due day<input id="bill-day" type="number" min="1" max="31" required></label><label class="field">Full monthly amount ($)<input id="bill-amount" type="number" min="0" max="10000000" step="0.01" required></label><label class="field">Who pays<select id="bill-owner"><option value="nick">Nick</option><option value="kiana">Kiana</option><option value="split">Split 50/50</option></select></label><label class="field">Payment type<select id="bill-kind"><option value="regular">Ongoing bill</option><option value="settled">Settled payment</option><option value="pennie">Pennie Loan</option><option value="loan">Other loan / fixed term</option></select></label><div id="term-fields"><label class="field">First payment month<input id="bill-start" type="month" min="2000-01" max="2100-12"></label><label class="field">Number of monthly payments<input id="bill-months" type="number" min="1" max="1200" step="1" placeholder="e.g. 12"></label><p class="note" id="term-preview">Leave the month count blank until you know it. The bill will stay active.</p></div><div class="dialog-actions"><button type="button" id="cancel-bill">Cancel</button><button class="primary">Save bill</button></div></form></dialog>
-<dialog id="income-dialog"><form id="income-form"><h2 id="income-dialog-title">Edit income</h2><label class="field">Amount per payment ($)<input id="income-amount" type="number" min="0" max="10000000" step="0.01" required></label><p class="note" id="income-help"></p><div class="dialog-actions"><button type="button" id="cancel-income">Cancel</button><button class="primary">Save income</button></div></form></dialog>
+<dialog id="income-dialog" style="max-height:85vh;overflow:auto"><form id="income-form"><h2 id="income-dialog-title">Edit income</h2><label class="field"><span id="income-amount-label">Amount per payment ($)</span><input id="income-amount" type="number" min="0" max="10000000" step="0.01" required></label><p class="note" id="income-help"></p>
+<div id="tips-editor" hidden>
+    <label class="field">Estimated weekly tips ($)<input id="tips-estimate" type="number" min="0" max="10000000" step="0.01"></label>
+    <label class="field">Tips used in the budget<select id="tips-method"><option value="estimate">Weekly estimate</option><option value="average">Average from tip log</option></select></label>
+    <h3>Tip log</h3>
+    <p class="note" id="tips-average" aria-live="polite"></p>
+    <label class="field">Date earned<input id="tip-date" type="date"></label>
+    <label class="field">Tips earned ($)<input id="tip-amount" type="number" step="any" inputmode="decimal" placeholder="0.00"></label>
+    <button type="button" id="add-tip">Add tip entry</button>
+    <p class="note" id="tip-error" role="status"></p>
+    <ul id="tip-entries"></ul>
+    <p class="note">Save income to keep your changes.</p>
+</div><div class="dialog-actions"><button type="button" id="cancel-income">Cancel</button><button class="primary">Save income</button></div></form></dialog>
 
 <script>
     // Init Date Readout
@@ -572,6 +584,20 @@ const SEED={bills:[
     const ACCOUNT_KEY='nickAccountSnapshot20261105V1';
     const parseBudgetDate=s=>{const [y,m,d]=s.split('-').map(Number);return new Date(y,m-1,d,12);};
     const budgetDateKey=d=>d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+    const tipPlan = income => income.tips ?? {estimate:0,method:'estimate',entries:[]};
+    function recentTips(tips, today=new Date()) {
+        const first=new Date(today);
+        first.setDate(first.getDate()-27);
+        const start=budgetDateKey(first), end=budgetDateKey(today);
+        return tips.entries.filter(entry=>entry.date>=start&&entry.date<=end);
+    }
+    const weeklyTipAverage = entries => Math.round(entries.reduce((sum,entry)=>sum+Math.round(entry.amount*100),0)/4)/100;
+    function plannedIncome(income) {
+        if(income.id!=='kiana') return income.amt;
+        const tips=tipPlan(income);
+        const entries=recentTips(tips);
+        return income.amt+(tips.method==='average'&&entries.length?weeklyTipAverage(entries):tips.estimate);
+    }
     const validBudgetDate=s=>typeof s==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(s)&&budgetDateKey(parseBudgetDate(s))===s;
     let accounts={nick:{checking:1762.30,savings:2200,asOf:'2026-11-05',specified:true},kiana:{checking:0,savings:0,asOf:'2026-11-05',specified:false},transfers:[]};
     try{const a=JSON.parse(localStorage.getItem(ACCOUNT_KEY));if(a&&['nick','kiana'].every(v=>a[v]&&Number.isFinite(a[v].checking)&&Number.isFinite(a[v].savings)&&a[v].savings>=0&&validBudgetDate(a[v].asOf))&&Array.isArray(a.transfers)&&a.transfers.every(t=>['nick','kiana'].includes(t.owner)&&typeof t.id==='string'&&Number.isFinite(t.amount)&&t.amount>0&&validBudgetDate(t.date)))accounts=a;}catch(e){}
@@ -586,7 +612,7 @@ const SEED={bills:[
         const dateStr=budgetDateKey(date),day=date.getDate(),m=monthKey(date),bills=scopedExpenses(m);
         let income=0;const enabled=o=>budgetView==='household'||budgetView===o;
         if(enabled('nick')){if(day===1)income+=incomes.find(i=>i.id==='va').amt;if(Math.round((date-nickAnchorDate)/86400000)>=0&&Math.round((date-nickAnchorDate)/86400000)%14===0)income+=incomes.find(i=>i.id==='nick').amt;}
-        if(enabled('kiana')&&Math.round((date-kianaAnchorDate)/86400000)>=0&&Math.round((date-kianaAnchorDate)/86400000)%7===0)income+=incomes.find(i=>i.id==='kiana').amt;
+        if(enabled('kiana')&&Math.round((date-kianaAnchorDate)/86400000)>=0&&Math.round((date-kianaAnchorDate)/86400000)%7===0)income+=plannedIncome(incomes.find(i=>i.id==='kiana'));
         let out=bills.filter(b=>b.day===day).reduce((n,b)=>n+b.amt,0);
         if(date.getDay()===1){let mondays=0;for(let d=1;d<=new Date(date.getFullYear(),date.getMonth()+1,0).getDate();d++)if(new Date(date.getFullYear(),date.getMonth(),d,12).getDay()===1)mondays++;out+=bills.filter(b=>b.day==='Weekly').reduce((n,b)=>n+b.amt/mondays,0);}
         out+=scopedLedger().filter(c=>c.date===dateStr).reduce((n,c)=>n+c.amt,0);
@@ -801,7 +827,7 @@ const SEED={bills:[
                             ${incomes.map(i => `
                                 <tr style="border-bottom: 1px solid #f1f5f9;">
                                     <td style="padding: 6px 0;"><strong>${i.name}</strong></td>
-                                    <td style="padding: 6px 0; text-align: right; color: #10b981; font-weight: bold;">$${i.amt.toLocaleString()}</td>
+                                    <td style="padding: 6px 0; text-align: right; color: #10b981; font-weight: bold;">$${plannedIncome(i).toLocaleString()}</td>
                                 </tr>
                             `).join('')}
                         </table>
@@ -1021,7 +1047,7 @@ const SEED={bills:[
         
         let nickAmt = personEnabled('nick') ? incomes.find(i=>i.id==='nick').amt : 0;
         let vaAmt = personEnabled('nick') ? incomes.find(i=>i.id==='va').amt : 0;
-        let kianaAmt = personEnabled('kiana') ? incomes.find(i=>i.id==='kiana').amt : 0;
+        let kianaAmt = personEnabled('kiana') ? plannedIncome(incomes.find(i=>i.id==='kiana')) : 0;
 
         let baseExpenseTotal = expenses.reduce((s,x)=>s+x.amt,0);
         document.getElementById('sum-exp').innerText='$'+baseExpenseTotal.toLocaleString();
@@ -1334,8 +1360,8 @@ const SEED={bills:[
 
         (()=>{
         const $=id=>document.getElementById(id),money=n=>new Intl.NumberFormat('en-US',{style:'currency',currency:'USD',maximumFractionDigits:2,minimumFractionDigits:0}).format(n);
-        let editingBill=null,editingIncome=null;
-        const totals=v=>{let income=incomes.filter(i=>v==='household'||i.owner===v).reduce((s,i)=>s+i.amt*i.multiplier,0),bills=expenses.filter(b=>billActive(b)).reduce((s,b)=>s+shareAmount(b,v),0),custom=customLedger.filter(c=>c.date.slice(0,7)===budgetMonth&&(v==='household'||(c.owner||'nick')===v)).reduce((s,c)=>s+c.amt,0);return{income,bills,custom,left:income-bills-custom};};
+        let editingBill=null,editingIncome=null,draftTips=null;
+        const totals=v=>{let income=incomes.filter(i=>v==='household'||i.owner===v).reduce((s,i)=>s+plannedIncome(i)*i.multiplier,0),bills=expenses.filter(b=>billActive(b)).reduce((s,b)=>s+shareAmount(b,v),0),custom=customLedger.filter(c=>c.date.slice(0,7)===budgetMonth&&(v==='household'||(c.owner||'nick')===v)).reduce((s,c)=>s+c.amt,0);return{income,bills,custom,left:income-bills-custom};};
         function setView(v){if(!isSandbox){scopeBalances[budgetView]=startBal;} budgetView=v;startBal=scopeBalances[v];runEngine();}
         window.renderFront=()=>{
             renderAccounts();
@@ -1348,7 +1374,7 @@ const SEED={bills:[
             $('budget-month').value=budgetMonth; $('plan-title').textContent=t.left>=0?'A little breathing room.':'Let’s make a little more room.';$('plan-note').textContent=(t.income?Math.round(t.bills/t.income*100):0)+'% of planned income goes to bills. '+(t.left>=0?'Custom entries this month: '+money(t.custom)+'. Give the rest a job: savings, spending, or a cushion.':'Review your amounts and assignments.');$('bill-bar').style.width=Math.min(100,t.income?t.bills/t.income*100:100)+'%';
             $('people').hidden=view!=='household';$('people').innerHTML=['nick','kiana'].map(v=>{const p=totals(v);return `<div class="person ${v}"><h3>${v==='nick'?'Nick':'Kiana'}</h3><dl><dt>Monthly income</dt><dd>${money(p.income)}</dd><dt>Assigned bills</dt><dd>${money(p.bills)}</dd><dt>Left after bills</dt><dd class="green">${money(p.left)}</dd></dl></div>`;}).join('');
             $('bills').innerHTML=visible.map(b=>`<tr><td class="day">${getOrdinal(b.day)}</td><td><button class="cell" data-edit="${safeText(b.id)}">${safeText(b.name)}</button>${hasTerm(b)?'<div class="billnote">Final payment '+safeText(addMonths(b.startMonth,b.termMonths-1))+'</div>':''}${b.name==='Mortgage'?'<div class="billnote">Paid in full on the 1st</div>':''}${b.owner==='split'&&view!=='household'?'<div class="billnote">Your half of '+money(b.amt)+'</div>':''}</td><td class="right"><button class="cell" data-edit="${safeText(b.id)}">${money(shareAmount(b))}</button></td><td><select class="owner ${b.owner}" data-owner="${safeText(b.id)}" aria-label="Who pays ${safeText(b.name)}">${['nick','split','kiana'].map(o=>`<option value="${o}" ${b.owner===o?'selected':''}>${o==='nick'?'Nick':o==='kiana'?'Kiana':'Split 50/50'}</option>`).join('')}</select></td><td><button class="remove" data-remove="${safeText(b.id)}" aria-label="Remove ${safeText(b.name)}">×</button></td></tr>`).join('');
-            $('incomes').innerHTML=scopedIncomes().map(i=>`<tr><td><button class="cell" data-income="${i.id}">${safeText(i.name)}</button></td><td>${safeText(i.schedule||i.desc)}</td><td class="right"><button class="cell green" data-income="${i.id}">${money(i.amt)}</button></td><td class="right green">${money(i.amt*i.multiplier)}</td><td class="right"><button type="button" class="cell purple" data-income="${i.id}" aria-label="Edit income for ${safeText(i.name)}">Edit</button></td></tr>`).join('');
+            $('incomes').innerHTML=scopedIncomes().map(i=>`<tr><td><button class="cell" data-income="${i.id}">${safeText(i.name)}</button></td><td>${safeText(i.schedule||i.desc)}</td><td class="right"><button class="cell green" data-income="${i.id}">${money(plannedIncome(i))}</button></td><td class="right green">${money(plannedIncome(i)*i.multiplier)}</td><td class="right"><button type="button" class="cell purple" data-income="${i.id}" aria-label="Edit income for ${safeText(i.name)}">Edit</button></td></tr>`).join('');
             renderDebtPlans();
         };
         function save(){saveData();runEngine();$('save-status').textContent=isSandbox?'Sandbox — changes are temporary':'Saved on this device';}
@@ -1358,8 +1384,82 @@ const SEED={bills:[
         $('bills').onclick=e=>{const edit=e.target.closest('[data-edit]'),remove=e.target.closest('[data-remove]');if(edit)openBill(edit.dataset.edit);if(remove){const b=expenses.find(b=>b.id===remove.dataset.remove);if(confirm('Remove '+b.name+'?')){expenses.splice(expenses.indexOf(b),1);save();}}};
         $('bills').onchange=e=>{if(e.target.matches('[data-owner]')){expenses.find(b=>b.id===e.target.dataset.owner).owner=e.target.value;save();}};
         $('bill-form').onsubmit=e=>{e.preventDefault();let amt=Number($('bill-amount').value),day=Number($('bill-day').value),name=$('bill-name').value.trim();if(!name||!Number.isFinite(amt)||amt<0||amt>1e7||!Number.isInteger(day)||day<1||day>31)return;const data={id:editingBill??('bill-'+Date.now()+'-'+Math.random().toString(36).slice(2)),name,day,amt,owner:$('bill-owner').value,kind:$('bill-kind').value,startMonth:$('bill-start').value,termMonths:$('bill-months').value?Number($('bill-months').value):null};if(data.termMonths!==null&&(!Number.isInteger(data.termMonths)||data.termMonths<1||data.termMonths>1200||!Number.isFinite(monthNumber(data.startMonth))))return;const i=expenses.findIndex(b=>b.id===editingBill);if(i<0)expenses.push(data);else expenses[i]=data;if(data.kind==='pennie')expenses.forEach(b=>{if(b.id!==data.id&&b.kind==='pennie')b.kind='loan';});save();$('bill-dialog').close();};
-        $('incomes').onclick=e=>{const b=e.target.closest('[data-income]');if(!b)return;editingIncome=b.dataset.income;const i=incomes.find(i=>i.id===editingIncome);$('income-dialog-title').textContent='Edit '+i.name;$('income-amount').value=i.amt;$('income-help').textContent=(i.schedule||i.desc)+' — monthly plan uses '+i.multiplier+' payments.';$('income-dialog').showModal();};
-        $('income-form').onsubmit=e=>{e.preventDefault();const amount=Number($('income-amount').value);if(!Number.isFinite(amount)||amount<0||amount>1e7)return;incomes.find(i=>i.id===editingIncome).amt=amount;save();$('income-dialog').close();};
+        function renderTipLog(){
+            const entries=recentTips({entries:draftTips});
+            $('tips-average').textContent=entries.length
+                ? money(weeklyTipAverage(entries))+' per week across the last 28 days. Log all tips for that period before relying on this average.'
+                : 'The last 28 days have no entries. The budget uses the weekly estimate until you log tips.';
+            $('tip-entries').replaceChildren(...draftTips.map((entry,index)=>{
+                const row=document.createElement('li');
+                const remove=document.createElement('button');
+                remove.type='button';
+                remove.textContent='Remove';
+                remove.setAttribute('aria-label','Remove '+money(entry.amount)+' tip entry for '+entry.date);
+                remove.onclick=()=>{draftTips.splice(index,1);renderTipLog();$('add-tip').focus();};
+                row.append(entry.date+' · '+money(entry.amount)+' ',remove);
+                return row;
+            }));
+        }
+
+        $('incomes').onclick=e=>{
+            const button=e.target.closest('[data-income]');
+            if(!button)return;
+            document.getElementById("income-form").reset();
+            editingIncome=button.dataset.income;
+            const income=incomes.find(i=>i.id===editingIncome);
+            const isKiana=income.id==='kiana';
+            $('income-dialog-title').textContent='Edit '+income.name;
+            $('income-amount-label').textContent=isKiana?'Regular weekly take-home pay ($)':'Amount per payment ($)';
+            $('income-amount').value=income.amt;
+            $('income-help').textContent=isKiana
+                ? 'Enter regular take-home pay without the tips you track below. The monthly plan uses four weeks of pay and tips.'
+                : (income.schedule||income.desc)+' — monthly plan uses '+income.multiplier+' payments.';
+            $('tips-editor').hidden=!isKiana;
+            if(isKiana){
+                const tips=tipPlan(income);
+                const today=budgetDateKey(new Date());
+                draftTips=[...tips.entries];
+                $('tips-estimate').value=tips.estimate;
+                $('tips-method').value=tips.method;
+                $('tip-date').max=today;
+                $('tip-date').value=today;
+                $('tip-amount').value='';
+                $('tip-error').textContent='';
+                renderTipLog();
+            }
+            $('income-dialog').showModal();
+        };
+
+        $('add-tip').onclick=()=>{
+            const date=$('tip-date').value, amount=$('tip-amount').valueAsNumber;
+            if(!validBudgetDate(date)||date>$('tip-date').max||!Number.isFinite(amount)||amount<=0||amount>1e7||Math.abs(amount*100-Math.round(amount*100))>1e-6){
+                $('tip-error').textContent='Enter today or an earlier date and a positive tip amount with up to two decimal places.';
+                return;
+            }
+            draftTips.push({date,amount});
+            draftTips.sort((a,b)=>b.date.localeCompare(a.date));
+            $('tip-amount').value='';
+            $('tip-error').textContent='';
+            renderTipLog();
+        };
+
+        $('income-form').onsubmit=e=>{
+            e.preventDefault();
+            const amount=$('income-amount').valueAsNumber;
+            if(!Number.isFinite(amount)||amount<0||amount>1e7)return;
+            const income=incomes.find(i=>i.id===editingIncome);
+            if(income.id==='kiana'){
+                if($('tip-amount').value||$('tip-amount').validity.badInput){
+                    $('tip-error').textContent='Add the tip entry or clear its amount before saving.';
+                    $('tip-amount').focus();
+                    return;
+                }
+                income.tips={estimate:Number($('tips-estimate').value),method:$('tips-method').value,entries:draftTips};
+            }
+            income.amt=amount;
+            save();
+            $('income-dialog').close();
+        };
     })();
 
     function pennieSchedule(){
