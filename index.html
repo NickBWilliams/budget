@@ -331,6 +331,31 @@
 @media print{.header-controls{display:none!important}.container{padding-bottom:0}}
 
 .account-panel{padding:24px;margin:0 0 20px;border:1px solid var(--border);border-radius:18px;background:white}.account-panel h2{font-size:19px}.account-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;margin-top:15px}.account-grid strong{display:block;font-size:27px;letter-spacing:-.7px;margin-top:7px;color:var(--primary);font-variant-numeric:tabular-nums}.transfer-row{display:flex;justify-content:space-between;gap:10px;align-items:center;padding:10px 0;border-top:1px solid var(--border);font-size:13px}.transfer-row button{padding:5px 8px}.account-panel .actions button{font-size:12px}#account-date{font-size:12px}@media(max-width:680px){.account-panel{padding:16px}.account-grid{gap:8px}.account-grid strong{font-size:20px}.account-grid .label{font-size:10px}.account-panel .heading{align-items:flex-start}.account-panel .actions{margin-top:5px}}
+
+.friendly{padding-top:18px}
+.friendly .welcome{margin-bottom:12px}
+.friendly .cards{margin-top:0}
+.friendly .plan{margin:12px 0 20px}
+#monthly-bills{scroll-margin-top:12px}
+#tip-filters{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));margin:12px 0}
+#tip-filters button{min-height:48px}
+#tip-filters strong{display:block;font-variant-numeric:tabular-nums}
+.tip-range summary{cursor:pointer;color:var(--purple);font-weight:650;padding:8px 0}
+#tip-range-form{display:grid;grid-template-columns:repeat(2,minmax(0,1fr)) auto;gap:10px;align-items:end}
+#tip-range-form .field{margin:0}
+#tip-range-form input{min-width:0}
+@media(max-width:680px){
+    .friendly .welcome{flex-direction:row;align-items:center}
+    .friendly .cards{grid-template-columns:repeat(2,minmax(0,1fr))}
+    .friendly .leftover{grid-column:1/-1}
+    .friendly .amount,.account-grid strong{overflow-wrap:anywhere}
+    #tip-filters{grid-template-columns:repeat(2,minmax(0,1fr))}
+    #tip-filters [data-tip-period=all]{grid-column:1/-1}
+    #tip-range-form{grid-template-columns:repeat(2,minmax(0,1fr))}
+    #tip-range-form button{grid-column:1/-1}
+    #dashboard-tip-history table{min-width:0}
+    #dashboard-tip-history .cell{min-height:44px;padding-inline:4px}
+}
 </style>
 </head>
 <body>
@@ -397,26 +422,31 @@
     </div>
 
 <div id="view-dashboard" class="friendly"><div class="welcome"><div><h2 id="view-title">Just your budget, Nick.</h2><p class="sub" id="scope-note"></p></div><button type="button" class="primary" id="log-tips" hidden>Log Tips</button></div>
+<div class="cards"><div class="card"><div class="label">Monthly income</div><div class="amount purple" id="income-total"></div><button type="button" class="cell purple" id="edit-income-shortcut">Edit income</button></div><div class="card"><div class="label">Monthly bills</div><div class="amount" id="bills-total"></div><div class="note" id="bill-count"></div><a class="cell purple" href="#monthly-bills">View bills</a></div><div class="card leftover"><div class="label">Left after bills</div><div class="amount green" id="left-total"></div><div class="note">After listed bills & custom entries</div></div></div>
+<div class="plan"><div style="flex:1;width:100%"><strong id="plan-title"></strong><p id="plan-note"></p><div class="bar"><span id="bill-bar"></span></div></div><div><div class="label">Weekly planning room</div><div id="weekly" class="amount purple" style="font-size:26px"></div><div class="note">Monthly leftover × 12 ÷ 52</div></div></div>
+<div class="people" id="people" hidden></div>
 <section class="account-panel glass-panel"><div class="heading"><div><h2>Your accounts</h2><p class="sub" id="account-date"></p></div><div class="actions"><button type="button" onclick="editAccountBalances()">Update balances</button><button type="button" class="primary" onclick="openSavingsTransfer()">Plan savings transfer</button></div></div><div class="account-grid"><div><span class="label">Checking · reported balance</span><strong id="account-checking"></strong></div><div><span class="label">Savings · reported balance</span><strong id="account-savings"></strong></div><div><span class="label">Total across accounts</span><strong id="account-total"></strong></div></div><p class="note" id="account-cushion"></p><div id="transfer-list"></div></section>
-<div class="cards"><div class="card"><div class="label">Monthly income</div><div class="amount purple" id="income-total"></div><button type="button" class="cell purple" id="edit-income-shortcut">Edit income</button></div><div class="card"><div class="label">Monthly bills</div><div class="amount" id="bills-total"></div><div class="note" id="bill-count"></div></div><div class="card leftover"><div class="label">Left after bills</div><div class="amount green" id="left-total"></div><div class="note">After listed bills & custom entries</div></div></div>
 <section class="panel" id="dashboard-tips" aria-labelledby="dashboard-tips-title" hidden>
     <div class="heading">
         <h2 id="dashboard-tips-title">Logged tips</h2>
         <strong class="purple" id="dashboard-tip-average" aria-live="polite"></strong>
     </div>
     <p class="sub">Weekly average from the last 28 days of logged tips.</p>
-    <div class="actions" id="tip-filters" role="group" aria-label="Filter logged tips" style="justify-content:flex-start;margin:12px 0">
+    <div class="actions" id="tip-filters" role="group" aria-label="Filter logged tips">
         <button type="button" class="primary" data-tip-period="all" aria-pressed="true">All tips</button>
         <button type="button" data-tip-period="week" aria-pressed="false">This week (Mon–Sun) <strong id="dashboard-tips-week"></strong></button>
         <button type="button" data-tip-period="last-week" aria-pressed="false">Last week (Mon–Sun) <strong id="dashboard-tips-last-week"></strong></button>
         <button type="button" data-tip-period="month" aria-pressed="false">This month <strong id="dashboard-tips-month"></strong></button>
         <button type="button" data-tip-period="last-month" aria-pressed="false">Last month <strong id="dashboard-tips-last-month"></strong></button>
     </div>
-    <form id="tip-range-form" class="actions" style="justify-content:flex-start">
+    <details class="tip-range">
+        <summary>Custom date range</summary>
+        <form id="tip-range-form">
         <label class="field">Start date<input type="date" id="tip-range-start" required></label>
         <label class="field">End date<input type="date" id="tip-range-end" required></label>
         <button type="submit">Apply date range</button>
-    </form>
+        </form>
+    </details>
     <p id="tip-range-total" role="status" hidden></p>
     <p class="note" id="dashboard-tips-empty" role="status">No tips logged yet.</p>
     <div class="table-wrap" id="dashboard-tip-history" hidden>
@@ -426,9 +456,7 @@
         </table>
     </div>
 </section>
-<div class="plan"><div style="flex:1;width:100%"><strong id="plan-title"></strong><p id="plan-note"></p><div class="bar"><span id="bill-bar"></span></div></div><div><div class="label">Weekly planning room</div><div id="weekly" class="amount purple" style="font-size:26px"></div><div class="note">Monthly leftover × 12 ÷ 52</div></div></div>
-<div class="people" id="people" hidden></div>
-<section class="panel"><div class="heading"><div><h2>Your monthly bills <span class="count" id="visible-count"></span></h2><p class="sub">Tap a bill to edit it. Change who pays whenever you need.</p></div><button class="primary" id="add-bill">+ Add bill</button></div><div class="table-wrap"><table><thead><tr><th>Due</th><th>Bill</th><th class="right">Monthly</th><th>Who pays</th><th><span hidden>Remove</span></th></tr></thead><tbody id="bills"></tbody><tfoot><tr><td colspan="2"><strong>Total in this view</strong></td><td class="right" id="table-total"></td><td colspan="2"></td></tr></tfoot></table></div><p class="note">Split bills are 50/50. Individual views show only that person's share; Together counts the full bill once. Mortgage is $3,149 paid in full on the 1st.</p></section>
+<section class="panel" id="monthly-bills" tabindex="-1"><div class="heading"><div><h2>Your monthly bills <span class="count" id="visible-count"></span></h2><p class="sub">Tap a bill to edit it. Change who pays whenever you need.</p></div><button class="primary" id="add-bill">+ Add bill</button></div><div class="table-wrap"><table><thead><tr><th>Due</th><th>Bill</th><th class="right">Monthly</th><th>Who pays</th><th><span hidden>Remove</span></th></tr></thead><tbody id="bills"></tbody><tfoot><tr><td colspan="2"><strong>Total in this view</strong></td><td class="right" id="table-total"></td><td colspan="2"></td></tr></tfoot></table></div><p class="note">Split bills are 50/50. Individual views show only that person's share; Together counts the full bill once. Mortgage is $3,149 paid in full on the 1st.</p></section>
 <section class="panel" id="income-panel" tabindex="-1"><div class="heading"><div><h2>Money coming in</h2></div><span class="save-status" id="save-status">Changes save on this device</span></div><div class="table-wrap"><table><thead><tr><th>Source</th><th>Pay schedule</th><th class="right">Per payment</th><th class="right">Monthly plan</th><th class="right">Actions</th></tr></thead><tbody id="incomes"></tbody></table></div></section>
  <section class="panel"><h2>Custom transactions & savings</h2><p class="note">Entries follow the selected person across Forecast, Vaults, Analytics and Matrix. Together includes both.</p>                <h4 style="margin-top: 30px; color:var(--primary); padding-top:20px; border-top: 2px solid var(--border-light); font-size: 0.95rem; text-transform: uppercase;">Custom transactions</h4>
                 <div id="transaction-name-note" style="font-size: 0.85rem; color: var(--text-sub); margin-bottom: 15px;">Name transaction <strong style="color:var(--danger)">"Pennie Extra"</strong> for debt, or <strong style="color:var(--success)">"Vault: [Name]"</strong> for savings!</div>
@@ -645,7 +673,8 @@ const SEED={bills:[
     let accounts={nick:{checking:1762.30,savings:2200,asOf:'2026-11-05',specified:true},kiana:{checking:0,savings:0,asOf:'2026-11-05',specified:false},transfers:[]};
     try{const a=JSON.parse(localStorage.getItem(ACCOUNT_KEY));if(a&&['nick','kiana'].every(v=>a[v]&&Number.isFinite(a[v].checking)&&Number.isFinite(a[v].savings)&&a[v].savings>=0&&validBudgetDate(a[v].asOf))&&Array.isArray(a.transfers)&&a.transfers.every(t=>['nick','kiana'].includes(t.owner)&&typeof t.id==='string'&&Number.isFinite(t.amount)&&t.amount>0&&validBudgetDate(t.date)))accounts=a;}catch(e){}
     let realAccountsJSON=JSON.stringify(accounts);
-    const accountMoney=n=>new Intl.NumberFormat('en-US',{style:'currency',currency:'USD',minimumFractionDigits:2,maximumFractionDigits:2}).format(n);
+    const accountCurrency=new Intl.NumberFormat('en-US',{style:'currency',currency:'USD'});
+    const accountMoney=n=>accountCurrency.format(n);
     const selectedAccount=()=>budgetView==='household'?{checking:accounts.nick.checking+accounts.kiana.checking,savings:accounts.nick.savings+accounts.kiana.savings,asOf:accounts.nick.asOf>accounts.kiana.asOf?accounts.nick.asOf:accounts.kiana.asOf,specified:true}:accounts[budgetView];
     const activeTransfers=()=>accounts.transfers.filter(t=>(budgetView==='household'||t.owner===budgetView)&&t.date>=accounts[t.owner].asOf);
     const transferAmountOn=date=>activeTransfers().filter(t=>t.date===date).reduce((n,t)=>n+t.amount,0);
@@ -948,6 +977,27 @@ const SEED={bills:[
         return n + (s[(v - 20) % 10] || s[v] || s[0]);
     }
 
+    let forecastMarkup='';
+    let forecastNeedsRender=false;
+    let chartNeedsUpdate=false;
+
+    function renderForecastCalendar(){
+        if(!forecastNeedsRender)return;
+        document.getElementById('calendar-body').innerHTML=forecastMarkup;
+        forecastNeedsRender=false;
+    }
+
+    function refreshChart(){
+        if(!chartInstance){initChart();return;}
+        if(!chartNeedsUpdate)return;
+        chartInstance.data.labels=chartLabels;
+        chartInstance.data.datasets[0].data=chartDataBalance;
+        chartInstance.data.datasets[1].data=chartDataDebt;
+        chartInstance.data.datasets[2].data=chartDataDanger;
+        chartInstance.update('none');
+        chartNeedsUpdate=false;
+    }
+
     function switchTab(t) {
         ['dashboard', 'calendar', 'chart', 'debt', 'vault'].forEach(view => {
             let el = document.getElementById('view-' + view);
@@ -958,7 +1008,8 @@ const SEED={bills:[
         let tabBtn = document.getElementById('tab-' + (t==='dashboard'?'dash':t==='calendar'?'cal':t));
         if(tabBtn) tabBtn.classList.add('active');
         window.scrollTo(0,0); 
-        if(t === 'chart') setTimeout(initChart, 50); 
+        if(t==='calendar')renderForecastCalendar();
+        if(t==='chart')requestAnimationFrame(refreshChart);
     }
 
     // INTERACTIVE ACTIONS
@@ -1176,8 +1227,14 @@ const SEED={bills:[
         vHtml += `<div class="vault-card glass-panel" style="display:flex; justify-content:center; align-items:center; border-style:dashed; cursor:pointer; background:transparent; border-color:var(--border);" onclick="addVault()"><strong style="color:var(--primary); font-size:1.1rem;">+ CREATE VAULT</strong></div>`;
         document.getElementById('vault-list').innerHTML = vHtml;
 
+        const ledgerByDate=new Map();
+        for(const entry of customLedger){
+            if(!ledgerByDate.has(entry.date))ledgerByDate.set(entry.date,[]);
+            ledgerByDate.get(entry.date).push(entry);
+        }
+        const entriesOn=date=>ledgerByDate.get(date)??[];
+
         // 5. True Calendar Math & Danger Scan
-        const calBody = document.getElementById('calendar-body');
         const todayDate = new Date(); 
         const normToday = new Date(todayDate.getFullYear(), todayDate.getMonth(), todayDate.getDate(), 12, 0, 0);
         
@@ -1213,7 +1270,7 @@ const SEED={bills:[
                 let dailyExpList = expenses.filter(x => x.day === i).map(x => ({...x}));
                 if (weekStartDays.includes(i)) expenses.filter(x => x.day === "Weekly").forEach(we => dailyExpList.push({ name: we.name, amt: we.amt / weekStartDays.length }));
                 
-                exactMonthExp += dailyExpList.reduce((s, x) => s + x.amt, 0) + customLedger.filter(x => x.date === dateStr).reduce((s, x) => s + x.amt, 0);
+                exactMonthExp += dailyExpList.reduce((s, x) => s + x.amt, 0) + entriesOn(dateStr).reduce((s, x) => s + x.amt, 0);
             }
             
             let exactNet=exactMonthInc-exactMonthExp+plannedTransferTotal;
@@ -1285,7 +1342,7 @@ const SEED={bills:[
                 let expTotal = dExp.reduce((s, x) => s + x.amt, 0);
                 
                 
-                let cLedger = customLedger.filter(x => x.date === dateStr);
+                let cLedger = entriesOn(dateStr);
                 cLedger.forEach(c => {
                     let cName = c.name.replace(" Extra", "+");
                     eventsHTML += `<div class="event ev-custom">-${safeText(cName)} $${Math.round(c.amt)}</div>`;
@@ -1304,7 +1361,7 @@ const SEED={bills:[
                     displayBal=accountMoney(bal);
 
                     let pBase = dExp.filter(x => x.kind==='pennie').reduce((s, x) => s + x.amt, 0);
-                    let pCust = customLedger.filter(x => x.date === dateStr && /pennie/i.test(x.name)).reduce((s, x) => s + x.amt, 0);
+                    let pCust = cLedger.filter(x => /pennie/i.test(x.name)).reduce((s, x) => s + x.amt, 0);
                     if(!isMathAnchorDay) loopPennieDebt = Math.max(0,loopPennieDebt - pBase - pCust);
 
                     if(bal < minGlobalBalance) { minGlobalBalance = bal; minGlobalDate = `${monthPrefix} ${i}, ${yearNum}`; }
@@ -1327,7 +1384,9 @@ const SEED={bills:[
         const mNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
         let cMo=Number(budgetMonth.slice(5)),cYr=Number(budgetMonth.slice(0,4)); 
         for (let m = 0; m < 12; m++) { calHtml += generateMonth(mNames[cMo - 1], cMo, cYr); cMo++; if (cMo > 12) { cMo = 1; cYr++; } }
-        calBody.innerHTML = calHtml;
+        forecastMarkup=calHtml;
+        forecastNeedsRender=true;
+        if(!document.getElementById('view-calendar').classList.contains('hidden'))renderForecastCalendar();
 
         // Apply Top Numbers w/ Animations
         let balStr=accountMoney(liveEstimatedBalance);
@@ -1354,17 +1413,13 @@ const SEED={bills:[
             sysStatus.className = "status-chip status-optimal"; sysStatus.innerHTML = "● Plan ready";
         }
         
-        if(chartInstance) { 
-            chartInstance.data.labels = chartLabels; 
-            chartInstance.data.datasets[0].data = chartDataBalance; 
-            chartInstance.data.datasets[1].data = chartDataDebt; 
-            chartInstance.data.datasets[2].data = chartDataDanger; 
-            chartInstance.update(); 
-        }
+        chartNeedsUpdate=true;
+        if(!document.getElementById('view-chart').classList.contains('hidden'))refreshChart();
     }
 
     function initChart() {
         if(chartInstance || typeof Chart==='undefined') return; 
+        chartNeedsUpdate=false;
         const ctx = document.getElementById('balanceChart').getContext('2d');
         
         let gradient = ctx.createLinearGradient(0, 0, 0, 400);
@@ -1402,7 +1457,7 @@ const SEED={bills:[
     window.vaultIndex=v=>vaults.indexOf(v);
 
         (()=>{
-        const $=id=>document.getElementById(id),money=n=>new Intl.NumberFormat('en-US',{style:'currency',currency:'USD',maximumFractionDigits:2,minimumFractionDigits:0}).format(n);
+        const $=id=>document.getElementById(id),money=accountMoney;
         let editingBill=null,editingIncome=null,draftTips=null,loggingTips=false;
         const totals=v=>{let income=incomes.filter(i=>v==='household'||i.owner===v).reduce((s,i)=>s+plannedIncome(i)*i.multiplier,0),bills=expenses.filter(b=>billActive(b)).reduce((s,b)=>s+shareAmount(b,v),0),custom=customLedger.filter(c=>c.date.slice(0,7)===budgetMonth&&(v==='household'||(c.owner||'nick')===v)).reduce((s,c)=>s+c.amt,0);return{income,bills,custom,left:income-bills-custom};};
         function setView(v){if(!isSandbox){scopeBalances[budgetView]=startBal;} budgetView=v;startBal=scopeBalances[v];runEngine();}
