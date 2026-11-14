@@ -643,13 +643,13 @@
 <div id="tips-editor" hidden>
     <div id="tip-settings"><label class="field">Estimated weekly tips ($)<input id="tips-estimate" type="number" min="0" max="10000000" step="0.01"></label>
     <label class="field">Tips used in the budget<select id="tips-method"><option value="estimate">Weekly estimate</option><option value="average">Average from tip log</option></select></label></div>
-    <h3>Tip log</h3>
+    <div id="tip-log-fields">
     <p class="note" id="tips-average" aria-live="polite"></p>
     <label class="field">Date earned<input id="tip-date" type="date"></label>
     <label class="field">Tips earned ($)<input id="tip-amount" type="number" step="any" inputmode="decimal" placeholder="0.00"></label>
-    <button type="button" id="add-tip">Add tip entry</button>
     <p class="note" id="tip-error" role="status"></p>
     <ul id="tip-entries"></ul>
+    </div>
 </div><div class="dialog-actions"><button type="button" id="cancel-income">Cancel</button><button class="primary" id="save-income">Save income</button></div></form></dialog>
 
 <script>
@@ -1728,7 +1728,7 @@ const SEED={bills:[
             $('income-help').hidden=tipsOnly;
             $('tip-settings').hidden=tipsOnly;
             $('tips-estimate').disabled=tipsOnly;
-            $('add-tip').hidden=tipsOnly;
+            $('tip-log-fields').hidden=!tipsOnly;
             $('save-income').textContent=tipsOnly?'Save tip':'Save income';
             const income=incomes.find(i=>i.id===editingIncome);
             const isKiana=income.id==='kiana';
@@ -1736,7 +1736,7 @@ const SEED={bills:[
             $('income-amount-label').textContent=isKiana?'Regular weekly take-home pay ($)':'Amount per payment ($)';
             $('income-amount').value=income.amt;
             $('income-help').textContent=isKiana
-                ? 'Enter regular take-home pay without the tips you track below. The monthly plan uses four weeks of pay and tips.'
+                ? 'Enter regular take-home pay without the tips you log separately. The monthly plan uses four weeks of pay and tips.'
                 : (income.schedule||income.desc)+' — monthly plan uses '+income.multiplier+' payments.';
             $('tips-editor').hidden=!isKiana;
             if(isKiana){
@@ -1749,7 +1749,7 @@ const SEED={bills:[
                 $('tip-date').value=today;
                 $('tip-amount').value='';
                 $('tip-error').textContent='';
-                renderTipLog();
+                if(tipsOnly)renderTipLog();
             }
             $('income-dialog').showModal();
             if(tipsOnly)$('tip-amount').focus();
@@ -1798,8 +1798,6 @@ const SEED={bills:[
             return true;
         }
 
-        $('add-tip').onclick=()=>{if(addTipEntry())renderTipLog();};
-
         $('income-form').onsubmit=e=>{
             e.preventDefault();
             const amount=$('income-amount').valueAsNumber;
@@ -1810,10 +1808,6 @@ const SEED={bills:[
                 if(loggingTips){
                     const removedEntry=draftTips.length<tipPlan(income).entries.length;
                     if((hasPendingTip||!removedEntry)&&!addTipEntry())return;
-                }else if(hasPendingTip){
-                    $('tip-error').textContent='Add the tip entry or clear its amount before saving.';
-                    $('tip-amount').focus();
-                    return;
                 }
                 income.tips=loggingTips
                     ? {...tipPlan(income),entries:draftTips}
