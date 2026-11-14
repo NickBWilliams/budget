@@ -412,6 +412,12 @@
         <button type="button" data-tip-period="month" aria-pressed="false">This month <strong id="dashboard-tips-month"></strong></button>
         <button type="button" data-tip-period="last-month" aria-pressed="false">Last month <strong id="dashboard-tips-last-month"></strong></button>
     </div>
+    <form id="tip-range-form" class="actions" style="justify-content:flex-start">
+        <label class="field">Start date<input type="date" id="tip-range-start" required></label>
+        <label class="field">End date<input type="date" id="tip-range-end" required></label>
+        <button type="submit">Apply date range</button>
+    </form>
+    <p id="tip-range-total" role="status" hidden></p>
     <p class="note" id="dashboard-tips-empty" role="status">No tips logged yet.</p>
     <div class="table-wrap" id="dashboard-tip-history" hidden>
         <table>
@@ -1445,6 +1451,12 @@ const SEED={bills:[
                 $('dashboard-tips-'+period).textContent=money(cents/100);
                 if(tipPeriod===period)visible=matches;
             }
+            $('tip-range-total').hidden=tipPeriod!=='custom';
+            if(tipPeriod==='custom'){
+                visible=rows.filter(({entry})=>entry.date>=tipRange.start&&entry.date<=tipRange.end);
+                const cents=visible.reduce((sum,{entry})=>sum+Math.round(entry.amount*100),0);
+                $('tip-range-total').textContent=tipRange.start+' to '+tipRange.end+' · Total tips '+money(cents/100);
+            }
             const recent=recentTips(tips,now);
             $('dashboard-tip-average').textContent=recent.length
                 ? money(weeklyTipAverage(recent))+' / week'
@@ -1464,17 +1476,33 @@ const SEED={bills:[
                 .join('');
         }
 
-        let editedTip=null, tipPeriod='all';
-        $('tip-filters').onclick=e=>{
-            const button=e.target.closest('[data-tip-period]');
-            if(!button)return;
-            tipPeriod=button.dataset.tipPeriod;
+        let editedTip=null, tipPeriod='all', tipRange=null;
+        function setTipPeriod(period){
+            tipPeriod=period;
             $('tip-filters').querySelectorAll('[data-tip-period]').forEach(filter=>{
-                const active=filter===button;
+                const active=filter.dataset.tipPeriod===period;
                 filter.setAttribute('aria-pressed',String(active));
                 filter.classList.toggle('primary',active);
             });
             renderDashboardTips();
+        }
+
+        $('tip-filters').onclick=e=>{
+            const button=e.target.closest('[data-tip-period]');
+            if(button)setTipPeriod(button.dataset.tipPeriod);
+        };
+
+        $('tip-range-form').oninput=()=>$('tip-range-end').setCustomValidity('');
+        $('tip-range-form').onsubmit=e=>{
+            e.preventDefault();
+            const start=$('tip-range-start').value, end=$('tip-range-end').value;
+            if(!validBudgetDate(start)||!validBudgetDate(end)||start>end){
+                $('tip-range-end').setCustomValidity('Choose an end date on or after the start date.');
+                $('tip-range-end').reportValidity();
+                return;
+            }
+            tipRange={start,end};
+            setTipPeriod('custom');
         };
         $('dashboard-tip-rows').onclick=e=>{
             const button=e.target.closest('[data-edit-tip],[data-delete-tip]');
