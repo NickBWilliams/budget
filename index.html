@@ -1412,6 +1412,7 @@ const SEED={bills:[
             document.querySelectorAll('[data-view]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.view===view)));
             $('log-tips').hidden=view!=='kiana';
             $('transaction-name-note').hidden=view==='kiana';
+            $('income-panel').hidden=view==='kiana';
             $('dashboard-tips').hidden=view!=='kiana';
             if(view==='kiana')renderDashboardTips();
             $('view-title').textContent=view==='nick'?'Just your budget, Nick.':view==='kiana'?"Kiana's own budget.":'Your household, together.';
