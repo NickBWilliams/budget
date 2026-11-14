@@ -641,8 +641,8 @@
 </dialog>
 <dialog id="income-dialog" style="max-height:85vh;overflow:auto"><form id="income-form"><h2 id="income-dialog-title">Edit income</h2><label class="field" id="income-pay-field"><span id="income-amount-label">Amount per payment ($)</span><input id="income-amount" type="number" min="0" max="10000000" step="0.01" required></label><p class="note" id="income-help"></p>
 <div id="tips-editor" hidden>
-    <div id="tip-settings"><label class="field">Estimated weekly tips ($)<input id="tips-estimate" type="number" min="0" max="10000000" step="0.01"></label>
-    <label class="field">Tips used in the budget<select id="tips-method"><option value="estimate">Weekly estimate</option><option value="average">Average from tip log</option></select></label></div>
+    <div id="tip-settings"><label class="field">Estimated weekly tips ($) · used when no tips were logged in the last 28 days<input id="tips-estimate" type="number" min="0" max="10000000" step="0.01"></label>
+</div>
     <div id="tip-log-fields">
     <p class="note" id="tips-average" aria-live="polite"></p>
     <label class="field">Date earned<input id="tip-date" type="date"></label>
@@ -722,7 +722,7 @@ const SEED={bills:[
     const ACCOUNT_KEY='nickAccountSnapshot20261105V1';
     const parseBudgetDate=s=>{const [y,m,d]=s.split('-').map(Number);return new Date(y,m-1,d,12);};
     const budgetDateKey=d=>d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
-    const tipPlan = income => income.tips ?? {estimate:0,method:'estimate',entries:[]};
+    const tipPlan = income => income.tips ?? {estimate:0,entries:[]};
     function recentTips(tips, today=new Date()) {
         const first=new Date(today);
         first.setDate(first.getDate()-27);
@@ -734,7 +734,7 @@ const SEED={bills:[
         if(income.id!=='kiana') return income.amt;
         const tips=tipPlan(income);
         const entries=recentTips(tips);
-        return income.amt+(tips.method==='average'&&entries.length?weeklyTipAverage(entries):tips.estimate);
+        return income.amt+(entries.length?weeklyTipAverage(entries):tips.estimate);
     }
     const validBudgetDate=s=>typeof s==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(s)&&budgetDateKey(parseBudgetDate(s))===s;
     let accounts={nick:{checking:1762.30,savings:2200,asOf:'2026-11-05',specified:true},kiana:{checking:0,savings:0,asOf:'2026-11-05',specified:false},transfers:[]};
@@ -1744,7 +1744,6 @@ const SEED={bills:[
                 const today=budgetDateKey(new Date());
                 draftTips=[...tips.entries];
                 $('tips-estimate').value=tips.estimate;
-                $('tips-method').value=tips.method;
                 $('tip-date').max=today;
                 $('tip-date').value=today;
                 $('tip-amount').value='';
@@ -1811,7 +1810,7 @@ const SEED={bills:[
                 }
                 income.tips=loggingTips
                     ? {...tipPlan(income),entries:draftTips}
-                    : {estimate:Number($('tips-estimate').value),method:$('tips-method').value,entries:draftTips};
+                    : {estimate:Number($('tips-estimate').value),entries:draftTips};
             }
             if(!loggingTips)income.amt=amount;
             save();
