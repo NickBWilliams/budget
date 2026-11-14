@@ -356,6 +356,57 @@
     #dashboard-tip-history table{min-width:0}
     #dashboard-tip-history .cell{min-height:44px;padding-inline:4px}
 }
+
+.planner-toolbar{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin:12px 0}
+.planner-toolbar .scope{margin:0;flex:0 1 380px}
+.planner-toolbar .month-picker{margin:0}
+.workspace-header{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:14px}
+.workspace-nav{display:flex;gap:4px;flex-wrap:wrap}
+.workspace-nav button{background:transparent;border-color:transparent;color:var(--muted);padding:8px 12px}
+.workspace-nav button[aria-pressed=true]{background:#eeecfb;color:var(--purple)}
+.workspace-inactive{display:none}
+.friendly{max-width:none;padding:10px 0 25px}
+.friendly .card,.friendly .panel,.friendly .account-panel{padding:16px 18px;border-radius:14px}
+.friendly .panel{margin:0 0 12px}
+.friendly .amount{font-size:27px;margin:5px 0}
+.friendly .plan{margin:10px 0 12px;padding:12px 16px}
+.friendly .account-panel{margin-bottom:12px}
+.friendly td{padding-block:8px}
+.friendly .heading{margin-bottom:8px}
+#dashboard-tip-history,#monthly-bills .table-wrap{max-height: min(52vh,460px);overflow:auto}
+#dashboard-tip-history th,#monthly-bills th{position:sticky;top:0;background:#fff;z-index:1}
+#alert-banner{padding:9px 14px;margin-bottom:8px;font-size:13px}
+@media screen and (min-width:769px){
+    body{padding-bottom:0}
+    .container{padding:14px 22px 20px}
+    .hud-header{margin-bottom:8px}
+    .overview-grid{display:grid;grid-template-columns:minmax(0,1.55fr) minmax(0,1fr);gap:14px;align-items:start}
+    .overview-grid .account-panel{margin-bottom:0}
+    .overview-grid .cards{gap:8px}
+    .overview-grid .card{min-width:0;padding:12px}
+    .overview-grid .amount,.overview-grid .account-grid strong{overflow-wrap:anywhere}
+    .overview-grid .account-grid{gap:8px}
+    .overview-grid .account-grid strong{font-size:22px}
+    .header-controls{position:static;padding:4px;margin:8px 0;border:1px solid var(--border);border-radius:12px;box-shadow:none}
+    .header-controls .tabs{max-width:none}
+    .header-controls .tab-btn{min-height:36px;flex-direction:row;gap:6px}
+    .header-controls .tab-icon{font-size:15px}
+}
+@media(max-width:768px){
+    .planner-toolbar,.friendly{margin-inline:9px}
+    .planner-toolbar .scope{flex:1 1 100%;max-width:none}
+    .workspace-header{flex-wrap:wrap}
+    .workspace-header button{min-height:42px}
+    .workspace-nav button{padding-inline:8px}
+    .friendly .card,.friendly .panel,.friendly .account-panel{padding:12px}
+    .friendly .amount{font-size:23px}
+    #dashboard-tip-history,#monthly-bills .table-wrap{max-height:none}
+}
+@media print{
+    .workspace-header{display:none!important}
+    .workspace-inactive:not([hidden]){display:block}
+    #dashboard-tip-history,#monthly-bills .table-wrap{max-height:none;overflow:visible}
+}
 </style>
 </head>
 <body>
@@ -391,9 +442,28 @@
         </div>
     </div>
 
-<nav class="scope" aria-label="Budget view"><button data-view="nick" aria-pressed="true">Nick</button><button data-view="kiana" aria-pressed="false">Kiana</button><button data-view="household" aria-pressed="false">Together</button></nav>
-<p class="scope-note" id="active-scope"></p>
-<div class="month-picker"><label for="budget-month">Planning month</label><input type="month" id="budget-month" min="2000-01" max="2100-12"><span>Forecast looks 12 months ahead. Finished payment plans drop out automatically.</span></div>
+<div class="planner-toolbar"><nav class="scope" aria-label="Budget view"><button data-view="nick" aria-pressed="true">Nick</button><button data-view="kiana" aria-pressed="false">Kiana</button><button data-view="household" aria-pressed="false">Together</button></nav>
+
+<div class="month-picker"><label for="budget-month">Planning month</label><input type="month" id="budget-month" min="2000-01" max="2100-12"></div></div>
+<nav class="header-controls" aria-label="Planner tabs">
+        <div class="tabs">
+            <button id="tab-dash" class="tab-btn active" onclick="switchTab('dashboard')">
+                <span class="tab-icon">⌘</span><span class="tab-label">Dashboard</span>
+            </button>
+            <button id="tab-cal" class="tab-btn" onclick="switchTab('calendar')">
+                <span class="tab-icon">📅</span><span class="tab-label">Forecast</span>
+            </button>
+            <button id="tab-vault" class="tab-btn" onclick="switchTab('vault')">
+                <span class="tab-icon">🏦</span><span class="tab-label">Vaults</span>
+            </button>
+            <button id="tab-chart" class="tab-btn" onclick="switchTab('chart')">
+                <span class="tab-icon">📈</span><span class="tab-label">Analytics</span>
+            </button>
+            <button id="tab-debt" class="tab-btn" onclick="switchTab('debt')">
+                <span class="tab-icon">🎯</span><span class="tab-label">Debt</span>
+            </button>
+        </div>
+    </nav>
     <div id="alert-banner" class="glass-panel hidden"></div>
     <div id="sandbox-indicator" class="hidden">🧪 Sandbox: try changes without saving them.</div>
 
@@ -421,12 +491,27 @@
         </div>
     </div>
 
-<div id="view-dashboard" class="friendly"><div class="welcome"><div><h2 id="view-title">Just your budget, Nick.</h2><p class="sub" id="scope-note"></p></div><button type="button" class="primary" id="log-tips" hidden>Log Tips</button></div>
-<div class="cards"><div class="card"><div class="label">Monthly income</div><div class="amount purple" id="income-total"></div><button type="button" class="cell purple" id="edit-income-shortcut">Edit income</button></div><div class="card"><div class="label">Monthly bills</div><div class="amount" id="bills-total"></div><div class="note" id="bill-count"></div><a class="cell purple" href="#monthly-bills">View bills</a></div><div class="card leftover"><div class="label">Left after bills</div><div class="amount green" id="left-total"></div><div class="note">After listed bills & custom entries</div></div></div>
+<div id="view-dashboard" class="friendly">
+    <div class="workspace-header">
+        <nav class="workspace-nav" aria-label="Dashboard sections">
+            <button type="button" data-workspace="overview" aria-pressed="true">Overview</button>
+            <button type="button" data-workspace="bills" aria-pressed="false">Bills</button>
+            <button type="button" data-workspace="tips" aria-pressed="false" hidden>Tips</button>
+            <button type="button" data-workspace="transactions" aria-pressed="false">Transactions</button>
+        </nav>
+        <button type="button" class="primary" id="log-tips" hidden>Log Tips</button>
+    </div>
+    <div data-workspace-panel="overview">
+<div class="overview-grid">
+<div class="overview-plan">
+<div class="cards"><div class="card"><div class="label">Monthly income</div><div class="amount purple" id="income-total"></div><button type="button" class="cell purple" id="edit-income-shortcut">Edit income</button></div><div class="card"><div class="label">Monthly bills</div><div class="amount" id="bills-total"></div><div class="note" id="bill-count"></div><button type="button" class="cell purple" id="view-bills">View bills</button></div><div class="card leftover"><div class="label">Left after bills</div><div class="amount green" id="left-total"></div><div class="note">After listed bills & custom entries</div></div></div>
 <div class="plan"><div style="flex:1;width:100%"><strong id="plan-title"></strong><p id="plan-note"></p><div class="bar"><span id="bill-bar"></span></div></div><div><div class="label">Weekly planning room</div><div id="weekly" class="amount purple" style="font-size:26px"></div><div class="note">Monthly leftover × 12 ÷ 52</div></div></div>
-<div class="people" id="people" hidden></div>
+</div>
 <section class="account-panel glass-panel"><div class="heading"><div><h2>Your accounts</h2><p class="sub" id="account-date"></p></div><div class="actions"><button type="button" onclick="editAccountBalances()">Update balances</button><button type="button" class="primary" onclick="openSavingsTransfer()">Plan savings transfer</button></div></div><div class="account-grid"><div><span class="label">Checking · reported balance</span><strong id="account-checking"></strong></div><div><span class="label">Savings · reported balance</span><strong id="account-savings"></strong></div><div><span class="label">Total across accounts</span><strong id="account-total"></strong></div></div><p class="note" id="account-cushion"></p><div id="transfer-list"></div></section>
-<section class="panel" id="dashboard-tips" aria-labelledby="dashboard-tips-title" hidden>
+</div>
+<div class="people" id="people" hidden></div>
+</div>
+<section class="panel workspace-inactive" data-workspace-panel="tips" id="dashboard-tips" aria-labelledby="dashboard-tips-title" hidden>
     <div class="heading">
         <h2 id="dashboard-tips-title">Logged tips</h2>
         <strong class="purple" id="dashboard-tip-average" aria-live="polite"></strong>
@@ -456,16 +541,16 @@
         </table>
     </div>
 </section>
-<section class="panel" id="monthly-bills" tabindex="-1"><div class="heading"><div><h2>Your monthly bills <span class="count" id="visible-count"></span></h2><p class="sub">Tap a bill to edit it. Change who pays whenever you need.</p></div><button class="primary" id="add-bill">+ Add bill</button></div><div class="table-wrap"><table><thead><tr><th>Due</th><th>Bill</th><th class="right">Monthly</th><th>Who pays</th><th><span hidden>Remove</span></th></tr></thead><tbody id="bills"></tbody><tfoot><tr><td colspan="2"><strong>Total in this view</strong></td><td class="right" id="table-total"></td><td colspan="2"></td></tr></tfoot></table></div><p class="note">Split bills are 50/50. Individual views show only that person's share; Together counts the full bill once. Mortgage is $3,149 paid in full on the 1st.</p></section>
-<section class="panel" id="income-panel" tabindex="-1"><div class="heading"><div><h2>Money coming in</h2></div><span class="save-status" id="save-status">Changes save on this device</span></div><div class="table-wrap"><table><thead><tr><th>Source</th><th>Pay schedule</th><th class="right">Per payment</th><th class="right">Monthly plan</th><th class="right">Actions</th></tr></thead><tbody id="incomes"></tbody></table></div></section>
- <section class="panel"><h2>Custom transactions & savings</h2><p class="note">Entries follow the selected person across Forecast, Vaults, Analytics and Matrix. Together includes both.</p>                <h4 style="margin-top: 30px; color:var(--primary); padding-top:20px; border-top: 2px solid var(--border-light); font-size: 0.95rem; text-transform: uppercase;">Custom transactions</h4>
+<section class="panel workspace-inactive" data-workspace-panel="bills" id="monthly-bills" tabindex="-1"><div class="heading"><div><h2>Your monthly bills <span class="count" id="visible-count"></span></h2><p class="sub">Tap a bill to edit it. Change who pays whenever you need.</p></div><button class="primary" id="add-bill">+ Add bill</button></div><div class="table-wrap"><table><thead><tr><th>Due</th><th>Bill</th><th class="right">Monthly</th><th>Who pays</th><th><span hidden>Remove</span></th></tr></thead><tbody id="bills"></tbody><tfoot><tr><td colspan="2"><strong>Total in this view</strong></td><td class="right" id="table-total"></td><td colspan="2"></td></tr></tfoot></table></div><p class="note">Split bills are 50/50. Individual views show only that person's share; Together counts the full bill once. Mortgage is $3,149 paid in full on the 1st.</p></section>
+<section class="panel" data-workspace-panel="overview" id="income-panel" tabindex="-1"><div class="heading"><div><h2>Money coming in</h2></div><span class="save-status" id="save-status">Changes save on this device</span></div><div class="table-wrap"><table><thead><tr><th>Source</th><th>Pay schedule</th><th class="right">Per payment</th><th class="right">Monthly plan</th><th class="right">Actions</th></tr></thead><tbody id="incomes"></tbody></table></div></section>
+ <section class="panel workspace-inactive" data-workspace-panel="transactions"><h2>Transactions</h2>
                 <div id="transaction-name-note" style="font-size: 0.85rem; color: var(--text-sub); margin-bottom: 15px;">Name transaction <strong style="color:var(--danger)">"Pennie Extra"</strong> for debt, or <strong style="color:var(--success)">"Vault: [Name]"</strong> for savings!</div>
                 
                 <div class="form-row">
-                    <input type="date" id="cust-date" required>
-                    <input type="text" id="cust-name" placeholder="Item Name..." required>
-                    <input type="number" id="cust-amt" placeholder="Amount ($)" required>
-                    <button class="btn btn-success" onclick="addCustomTransaction()">ADD</button>
+                    <input type="date" id="cust-date" aria-label="Transaction date" required>
+                    <input type="text" id="cust-name" aria-label="Transaction name" placeholder="Item Name..." required>
+                    <input type="number" id="cust-amt" aria-label="Transaction amount" placeholder="Amount ($)" required>
+                    <button class="btn btn-success" onclick="addCustomTransaction()">Add transaction</button>
                 </div>
                 
                 <table style="margin-top: 10px;">
@@ -533,25 +618,7 @@
     </div>
 </div>
 
-<nav class="header-controls" aria-label="Planner tabs">
-        <div class="tabs">
-            <button id="tab-dash" class="tab-btn active" onclick="switchTab('dashboard')">
-                <span class="tab-icon">⌘</span><span class="tab-label">Panel</span>
-            </button>
-            <button id="tab-cal" class="tab-btn" onclick="switchTab('calendar')">
-                <span class="tab-icon">📅</span><span class="tab-label">Forecast</span>
-            </button>
-            <button id="tab-vault" class="tab-btn" onclick="switchTab('vault')">
-                <span class="tab-icon">🏦</span><span class="tab-label">Vaults</span>
-            </button>
-            <button id="tab-chart" class="tab-btn" onclick="switchTab('chart')">
-                <span class="tab-icon">📈</span><span class="tab-label">Analytics</span>
-            </button>
-            <button id="tab-debt" class="tab-btn" onclick="switchTab('debt')">
-                <span class="tab-icon">🎯</span><span class="tab-label">Matrix</span>
-            </button>
-        </div>
-    </nav>
+
 <dialog id="account-dialog"><form id="account-form"><h2>Update account balances</h2><label class="field">Checking balance ($)<input id="checking-input" type="number" step="0.01" required></label><label class="field">Savings balance ($)<input id="savings-input" type="number" min="0" step="0.01" required></label><label class="field">Balances as of<input id="account-asof" type="date" required></label><p class="note">Enter the balances already showing at your bank. Forecast applies later scheduled activity. Plans on this date are treated as additional moves after this snapshot.</p><div class="dialog-actions"><button type="button" onclick="document.getElementById('account-dialog').close()">Cancel</button><button class="primary">Save balances</button></div></form></dialog>
 <dialog id="transfer-dialog"><form id="transfer-form"><h2>Plan savings → checking</h2><p class="note">This is a forecast only. It does not move money at your bank or count as new income. Reported balances stay unchanged.</p><label class="field">Transfer amount ($)<input id="transfer-amount" type="number" min="0.01" step="0.01" required></label><label class="field">Planned date<input id="transfer-date" type="date" required></label><p class="note" id="transfer-available"></p><p id="transfer-error" role="alert" class="negative"></p><div class="dialog-actions"><button type="button" onclick="document.getElementById('transfer-dialog').close()">Cancel</button><button class="primary">Add to forecast</button></div></form></dialog>
 <dialog id="bill-dialog"><form id="bill-form"><h2 id="dialog-title">Edit bill</h2><label class="field">Bill name<input id="bill-name" required maxlength="100"></label><label class="field">Due day<input id="bill-day" type="number" min="1" max="31" required></label><label class="field">Full monthly amount ($)<input id="bill-amount" type="number" min="0" max="10000000" step="0.01" required></label><label class="field">Who pays<select id="bill-owner"><option value="nick">Nick</option><option value="kiana">Kiana</option><option value="split">Split 50/50</option></select></label><label class="field">Payment type<select id="bill-kind"><option value="regular">Ongoing bill</option><option value="settled">Settled payment</option><option value="pennie">Pennie Loan</option><option value="loan">Other loan / fixed term</option></select></label><div id="term-fields"><label class="field">First payment month<input id="bill-start" type="month" min="2000-01" max="2100-12"></label><label class="field">Number of monthly payments<input id="bill-months" type="number" min="1" max="1200" step="1" placeholder="e.g. 12"></label><p class="note" id="term-preview">Leave the month count blank until you know it. The bill will stay active.</p></div><div class="dialog-actions"><button type="button" id="cancel-bill">Cancel</button><button class="primary">Save bill</button></div></form></dialog>
@@ -1460,6 +1527,26 @@ const SEED={bills:[
         const $=id=>document.getElementById(id),money=accountMoney;
         let editingBill=null,editingIncome=null,draftTips=null,loggingTips=false;
         const totals=v=>{let income=incomes.filter(i=>v==='household'||i.owner===v).reduce((s,i)=>s+plannedIncome(i)*i.multiplier,0),bills=expenses.filter(b=>billActive(b)).reduce((s,b)=>s+shareAmount(b,v),0),custom=customLedger.filter(c=>c.date.slice(0,7)===budgetMonth&&(v==='household'||(c.owner||'nick')===v)).reduce((s,c)=>s+c.amt,0);return{income,bills,custom,left:income-bills-custom};};
+        let workspace='overview';
+        function selectWorkspace(section){
+            workspace=section;
+            document.querySelectorAll('[data-workspace]').forEach(button=>{
+                button.setAttribute('aria-pressed',String(button.dataset.workspace===section));
+            });
+            document.querySelectorAll('[data-workspace-panel]').forEach(panel=>{
+                panel.classList.toggle('workspace-inactive',panel.dataset.workspacePanel!==section);
+            });
+        }
+
+        document.querySelector('.workspace-nav').onclick=e=>{
+            const button=e.target.closest('[data-workspace]');
+            if(button)selectWorkspace(button.dataset.workspace);
+        };
+        $('view-bills').onclick=()=>{
+            selectWorkspace('bills');
+            document.querySelector('[data-workspace=bills]').focus();
+        };
+
         function setView(v){if(!isSandbox){scopeBalances[budgetView]=startBal;} budgetView=v;startBal=scopeBalances[v];runEngine();}
         window.renderFront=()=>{
             renderAccounts();
@@ -1468,11 +1555,10 @@ const SEED={bills:[
             $('log-tips').hidden=view!=='kiana';
             $('transaction-name-note').hidden=view==='kiana';
             $('income-panel').hidden=view==='kiana';
+            document.querySelector('[data-workspace=tips]').hidden=view!=='kiana';
             $('dashboard-tips').hidden=view!=='kiana';
+            if(view!=='kiana'&&workspace==='tips')selectWorkspace('overview');
             if(view==='kiana')renderDashboardTips();
-            $('view-title').textContent=view==='nick'?'Just your budget, Nick.':view==='kiana'?"Kiana's own budget.":'Your household, together.';
-            $('scope-note').textContent=view==='nick'?"Your income and assigned bills. Kiana's stay in her own view.":view==='kiana'?"Only Kiana's income and assigned bills.":'Both incomes and all bills, with individual totals below.';
-            $('active-scope').textContent=(view==='nick'?'Nick only':view==='kiana'?'Kiana only':'Nick + Kiana')+' · Applies to Panel, Forecast, Vaults, Analytics, Matrix and PDF. Existing unassigned custom entries and vaults belong to Nick.';
             $('income-total').textContent=money(t.income);$('bills-total').textContent=money(t.bills);$('left-total').textContent=money(t.left);$('left-total').classList.toggle('negative',t.left<0);$('bill-count').textContent=visible.length+' active bills';$('visible-count').textContent='('+visible.length+')';$('table-total').textContent=money(t.bills);$('weekly').textContent=money(t.left*12/52);
             $('budget-month').value=budgetMonth; $('plan-title').textContent=t.left>=0?'A little breathing room.':'Let’s make a little more room.';$('plan-note').textContent=(t.income?Math.round(t.bills/t.income*100):0)+'% of planned income goes to bills. '+(t.left>=0?'Custom entries this month: '+money(t.custom)+'. Give the rest a job: savings, spending, or a cushion.':'Review your amounts and assignments.');$('bill-bar').style.width=Math.min(100,t.income?t.bills/t.income*100:100)+'%';
             $('people').hidden=view!=='household';$('people').innerHTML=['nick','kiana'].map(v=>{const p=totals(v);return `<div class="person ${v}"><h3>${v==='nick'?'Nick':'Kiana'}</h3><dl><dt>Monthly income</dt><dd>${money(p.income)}</dd><dt>Assigned bills</dt><dd>${money(p.bills)}</dd><dt>Left after bills</dt><dd class="green">${money(p.left)}</dd></dl></div>`;}).join('');
