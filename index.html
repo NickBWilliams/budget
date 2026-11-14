@@ -407,7 +407,9 @@
     <p class="sub">Weekly average from the last 28 days of logged tips.</p>
     <div class="actions" style="justify-content:flex-start;margin:12px 0">
         <div><span class="label">This week (Mon–Sun)</span> <strong id="dashboard-tips-week"></strong></div>
+        <div><span class="label">Last week (Mon–Sun)</span> <strong id="dashboard-tips-last-week"></strong></div>
         <div><span class="label">This month</span> <strong id="dashboard-tips-month"></strong></div>
+        <div><span class="label">Last month</span> <strong id="dashboard-tips-last-month"></strong></div>
     </div>
     <p class="note" id="dashboard-tips-empty">No tips logged yet.</p>
     <div class="table-wrap" id="dashboard-tip-history" hidden>
@@ -1423,15 +1425,23 @@ const SEED={bills:[
             const monday=new Date(now);
             monday.setDate(monday.getDate()-(monday.getDay()+6)%7);
             const weekStart=budgetDateKey(monday), monthStart=monthKey(now)+'-01';
-            let weekCents=0, monthCents=0;
+            const priorMonday=new Date(monday);
+            priorMonday.setDate(priorMonday.getDate()-7);
+            const lastWeekStart=budgetDateKey(priorMonday);
+            const lastMonthStart=monthKey(new Date(now.getFullYear(),now.getMonth()-1,1))+'-01';
+            let weekCents=0, lastWeekCents=0, monthCents=0, lastMonthCents=0;
             for(const entry of tips.entries){
                 if(entry.date>today)continue;
                 const cents=Math.round(entry.amount*100);
                 if(entry.date>=weekStart)weekCents+=cents;
+                else if(entry.date>=lastWeekStart)lastWeekCents+=cents;
                 if(entry.date>=monthStart)monthCents+=cents;
+                else if(entry.date>=lastMonthStart)lastMonthCents+=cents;
             }
             $('dashboard-tips-week').textContent=money(weekCents/100);
+            $('dashboard-tips-last-week').textContent=money(lastWeekCents/100);
             $('dashboard-tips-month').textContent=money(monthCents/100);
+            $('dashboard-tips-last-month').textContent=money(lastMonthCents/100);
             const recent=recentTips(tips,now);
             $('dashboard-tip-average').textContent=recent.length
                 ? money(weeklyTipAverage(recent))+' / week'
