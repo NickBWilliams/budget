@@ -405,7 +405,7 @@
 .forecast-toolbar .actions button,.forecast-toolbar select{min-height:40px;border:1px solid var(--border);border-radius:8px;background:#fff;padding:5px 10px}
 .forecast-toolbar button:disabled{opacity:.4;cursor:default}
 .planner-page summary{cursor:pointer;font-weight:650}
-.planner-page .month-stats{display:flex;flex-flow:row nowrap;gap:12px;overflow-x:auto;padding:5px 8px;margin-bottom:6px;background:#fff;border:1px solid var(--border);border-radius:8px}
+.planner-page .month-stats{display:flex;flex-flow:row nowrap;gap:12px;padding:5px 8px;margin-bottom:6px;background:#fff;border:1px solid var(--border);border-radius:8px}
 #view-calendar .forecast-toolbar{justify-content:flex-start;flex-wrap:wrap;gap:6px}
 #view-calendar .forecast-toolbar .actions{margin-left:auto;flex-wrap:nowrap}
 #show-forecast-snapshot{padding:6px 9px;font-size:12px;min-height:36px}
@@ -439,7 +439,15 @@
 .day-count{background:var(--primary-light);color:var(--primary-dark);font-size:10px;font-weight:750;border-radius:4px;padding:1px 4px}
 .forecast-day .cal-bal{grid-column:1/-1;margin:0;text-align:left;font-size:11px}
 #forecast-day-events .event{font-size:13px}
+@media(min-width:769px){
+    .forecast-day{min-height:clamp(46px,calc((100dvh - 432px) / 6),68px);padding:6px 8px}
+}
+.forecast-compact-amount{display:none}
 @media(max-width:680px){
+    .planner-page .month-stats{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);gap:3px;padding:5px 3px}
+    .planner-page .cs-chip{display:flex;flex-direction:column;align-items:center;gap:1px;font-size:10px;line-height:1.25}
+    .forecast-full-amount{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}
+    .forecast-compact-amount{display:inline;font-variant-numeric:tabular-nums}
     .planner-page .calendar-grid{gap:3px}
     .forecast-day{padding:4px}
     .day-count-label,.forecast-day .cal-bal{display:none}
@@ -766,6 +774,12 @@ const SEED={bills:[
     let realAccountsJSON=JSON.stringify(accounts);
     const accountCurrency=new Intl.NumberFormat('en-US',{style:'currency',currency:'USD'});
     const accountMoney=n=>accountCurrency.format(n);
+    const compactForecastCurrency=new Intl.NumberFormat('en-US',{
+        style:'currency',currency:'USD',notation:'compact',maximumFractionDigits:1,
+    });
+    function forecastTotal(amount){
+        return `<strong class="forecast-full-amount">${accountMoney(amount)}</strong><strong class="forecast-compact-amount" aria-hidden="true">${compactForecastCurrency.format(amount)}</strong>`;
+    }
     const selectedAccount=()=>budgetView==='household'?{checking:accounts.nick.checking+accounts.kiana.checking,savings:accounts.nick.savings+accounts.kiana.savings,asOf:accounts.nick.asOf>accounts.kiana.asOf?accounts.nick.asOf:accounts.kiana.asOf,specified:true}:accounts[budgetView];
     const activeTransfers=()=>accounts.transfers.filter(t=>(budgetView==='household'||t.owner===budgetView)&&t.date>=accounts[t.owner].asOf);
     const transferAmountOn=date=>activeTransfers().filter(t=>t.date===date).reduce((n,t)=>n+t.amount,0);
@@ -1365,12 +1379,12 @@ const SEED={bills:[
             let utilRatio = exactMonthInc > 0 ? (exactMonthExp / exactMonthInc) * 100 : 0;
             
             let mHtml = `
-                <div class="month-stats" role="region" aria-label="Forecast monthly totals" tabindex="0">
-                    <span class="cs-chip">In <strong>${accountMoney(exactMonthInc)}</strong></span>
-                    <span class="cs-chip">Out <strong>${accountMoney(exactMonthExp)}</strong></span>
-                    <span class="cs-chip">Net <strong>${accountMoney(exactNet)}</strong></span>
+                <div class="month-stats" role="region" aria-label="Forecast monthly totals">
+                    <span class="cs-chip">In ${forecastTotal(exactMonthInc)}</span>
+                    <span class="cs-chip">Out ${forecastTotal(exactMonthExp)}</span>
+                    <span class="cs-chip">Net ${forecastTotal(exactNet)}</span>
                     <span class="cs-chip">Income used <strong>${exactMonthInc>0?utilRatio.toFixed(1)+'%':'—'}</strong></span>
-                    ${plannedTransferTotal?`<span class="cs-chip">From savings <strong>${accountMoney(plannedTransferTotal)}</strong></span>`:''}
+                    ${plannedTransferTotal?`<span class="cs-chip">From savings ${forecastTotal(plannedTransferTotal)}</span>`:''}
                 </div>
                 <div class="calendar-wrapper"><div class="calendar-grid">
                 <div class="cal-header">Sun</div><div class="cal-header">Mon</div><div class="cal-header">Tue</div><div class="cal-header">Wed</div><div class="cal-header">Thu</div><div class="cal-header">Fri</div><div class="cal-header">Sat</div>`;
