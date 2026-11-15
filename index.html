@@ -145,13 +145,6 @@
         .month-title { font-size: 1.4rem; font-weight: 800; color: var(--text-main); letter-spacing: 1px; text-transform: uppercase; line-height: 1.2;}
         .cs-chip { padding: 8px 14px; border-radius: 10px; font-size: 0.85rem; font-weight: 800; font-family: 'JetBrains Mono', monospace; background: #fff; border: 1px solid var(--border); box-shadow: 0 2px 5px rgba(0,0,0,0.02); display: flex; align-items: center; gap: 8px;}
         
-        .cs-util-wrapper { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 15px; background: rgba(15,23,42,0.02); padding: 15px 20px; border-radius: 14px; border: 1px solid var(--border-light); }
-        .cs-util-label { font-size: 0.75rem; font-weight: 800; color: var(--text-sub); letter-spacing: 1.5px; text-transform: uppercase; white-space: nowrap;}
-        .cs-bar-bg { width: 100%; height: 12px; background: var(--border); border-radius: 10px; overflow: hidden; position: relative; }
-        .cs-bar-fill { height: 100%; background: linear-gradient(90deg, #60a5fa, #4f46e5); transition: width 1s cubic-bezier(0.4, 0, 0.2, 1); border-radius: 10px; }
-        .cs-bar-fill.high { background: linear-gradient(90deg, #fcd34d, #d97706); }
-        .cs-bar-fill.critical { background: linear-gradient(90deg, #fb7185, #e11d48); }
-        .cs-util-val { font-size: 1.1rem; font-weight: 800; color: var(--text-main); font-family: 'JetBrains Mono', monospace; width: 55px; text-align: right; }
 
         /* Calendar Desktop Grid */
         .calendar-wrapper { width: 100%; overflow-x: auto; padding-bottom: 20px; scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch; }
@@ -418,7 +411,9 @@
 .forecast-toolbar button:disabled{opacity:.4;cursor:default}
 .forecast-snapshot{padding:10px 14px;margin:0 0 10px}
 .planner-page summary{cursor:pointer;font-weight:650}
-.planner-page .month-header-strip{padding:10px 14px;margin:0 0 6px}
+.planner-page .month-header-strip{padding:4px 8px;margin:0 0 6px}
+.planner-page .month-stats{gap:4px;flex-wrap:wrap}
+.planner-page .cs-chip{font-size:11px;padding:3px 5px;border-radius:5px;box-shadow:none}
 .planner-page .month-title{font-size:16px}
 .planner-page .calendar-wrapper{padding-bottom:6px}
 .planner-page .calendar-grid{grid-template-columns:repeat(7,minmax(0,1fr));min-width:650px;gap:4px}
@@ -1357,24 +1352,16 @@ const SEED={bills:[
             
             let exactNet=exactMonthInc-exactMonthExp+plannedTransferTotal;
             let utilRatio = exactMonthInc > 0 ? (exactMonthExp / exactMonthInc) * 100 : 0;
-            let barColorClass = utilRatio > 95 ? "critical" : utilRatio > 85 ? "high" : "";
             
             let mHtml = `
                 <div class="month-header-strip glass-panel">
                     <div class="month-header-top">
-                        <div class="month-title">${monthPrefix} ${yearNum}</div>
                         <div class="month-stats">
+                            <div class="cs-chip">Income used: ${exactMonthInc>0?utilRatio.toFixed(1)+'%':'—'}</div>
                             <div class="cs-chip" style="color:var(--success)">IN: $${exactMonthInc.toLocaleString(undefined, {maximumFractionDigits:0})}</div>
                             <div class="cs-chip" style="color:var(--danger)">OUT: $${exactMonthExp.toLocaleString(undefined, {maximumFractionDigits:0})}</div>
                             ${plannedTransferTotal?`<div class="cs-chip">FROM SAVINGS: $${plannedTransferTotal.toLocaleString()}</div>`:''}<div class="cs-chip" style="background:var(--primary-light); color:var(--primary); border:none;">NET: ${exactNet >= 0 ? '+' : ''}$${exactNet.toLocaleString(undefined, {maximumFractionDigits:0})}</div>
                         </div>
-                    </div>
-                    <div class="cs-util-wrapper">
-                        <div class="cs-util-label">Income used</div>
-                        <div class="cs-bar-bg">
-                            <div class="cs-bar-fill ${barColorClass}" style="width: ${Math.min(utilRatio, 100)}%;"></div>
-                        </div>
-                        <div class="cs-util-val">${utilRatio.toFixed(1)}%</div>
                     </div>
                 </div>
                 <div class="calendar-wrapper"><div class="calendar-grid">
