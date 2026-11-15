@@ -164,7 +164,7 @@
         .cal-day { background: #fff; border-radius: 16px; padding: 12px; border: 1px solid var(--border); min-height: 130px; display: flex; flex-direction: column; transition: 0.2s; scroll-snap-align: start; box-shadow: 0 2px 5px rgba(0,0,0,0.01);}
         .cal-day:hover { border-color: var(--primary); box-shadow: 0 8px 20px var(--primary-light); transform: translateY(-2px); z-index: 2;}
         .cal-day.empty { background: transparent; border: none; box-shadow: none; pointer-events: none; }
-        .cal-day.past { opacity: 0.4; pointer-events: none; background: #f8fafc; border: 1px dashed var(--border); }
+        .cal-day.past { background: #f8fafc; border: 1px dashed var(--border); }
         .cal-num { font-weight: 800; font-size: 0.9rem; color: var(--text-sub); margin-bottom: 10px; }
         .cal-bal { font-size: 1rem; font-weight: 800; color: var(--text-main); text-align: right; margin-top: auto; font-family: 'JetBrains Mono', monospace; }
         
@@ -416,7 +416,7 @@
 .forecast-toolbar .actions{display:flex;gap:4px}
 .forecast-toolbar button,.forecast-toolbar select{min-height:40px;border:1px solid var(--border);border-radius:8px;background:#fff;padding:5px 10px}
 .forecast-toolbar button:disabled{opacity:.4;cursor:default}
-.forecast-snapshot,.pennie-link{padding:10px 14px;margin:0 0 10px}
+.forecast-snapshot{padding:10px 14px;margin:0 0 10px}
 .planner-page summary{cursor:pointer;font-weight:650}
 .planner-page .month-header-strip{padding:10px 14px;margin:0 0 6px}
 .planner-page .month-title{font-size:16px}
@@ -434,11 +434,25 @@
 .planner-page .debt-summary>div,.planner-page .debt-plan{padding:10px 12px}
 .planner-page .debt-plan h3,.debt-payment{margin:5px 0}
 .planner-page .debt-plan button{margin-top:8px}
-.planner-page .pennie-link{margin-top:10px}
-.planner-page #pennie-model{padding:14px!important}
 @media(max-width:768px){
     .planner-page{margin-inline:9px}
     .planner-page .chart-wrapper{height:320px}
+}
+
+.planner-page .calendar-grid{min-width:0}
+.planner-page .cal-day{min-height:46px;padding:0;overflow:hidden}
+.planner-page .cal-day.empty{min-height:0}
+.planner-page .cal-day:hover{transform:none;box-shadow:none}
+.forecast-day{display:grid;grid-template-columns:1fr auto;gap:2px 4px;align-content:start;width:100%;height:100%;min-height:46px;padding:4px 6px;text-align:left;border:0;border-radius:7px;background:transparent}
+.forecast-day:focus-visible{outline-offset:-3px}
+.forecast-day:hover{background:var(--primary-light)}
+.day-count{background:var(--primary-light);color:var(--primary-dark);font-size:10px;font-weight:750;border-radius:4px;padding:1px 4px}
+.forecast-day .cal-bal{grid-column:1/-1;margin:0;text-align:left;font-size:11px}
+#forecast-day-events .event{font-size:13px}
+@media(max-width:680px){
+    .planner-page .calendar-grid{gap:3px}
+    .forecast-day{padding:4px}
+    .day-count-label,.forecast-day .cal-bal{display:none}
 }
 </style>
 </head>
@@ -517,10 +531,6 @@
             <div class="stat-label">Money Left Over / Month</div>
             <div class="stat-val" id="sum-surplus" style="color: var(--success);">+$90</div>
             <div id="surplus-sub" style="font-size: 0.7rem; color: var(--text-sub); margin-top: 6px; font-weight: 700; line-height: 1.3;">Income minus Expenses</div>
-        </div>
-        <div class="stat-card glass-panel" style="border-left: 5px solid var(--warning);">
-            <div class="stat-label">Pennie Debt Eliminated</div>
-            <div class="stat-val" id="sum-debt-paid" style="color: var(--warning);">$3,666</div>
         </div>
     </div>
 
@@ -610,7 +620,7 @@
     </div>
 
     <div id="view-chart" class="planner-page hidden">
-        <div class="column-title">Balance & debt forecast</div>
+        <div class="column-title">Balance forecast</div>
         <p style="font-size: 0.85rem; color: var(--text-sub); margin-top: -10px; margin-bottom: 15px;">
             The orange line marks the $4,000 forecast threshold.
         </p>
@@ -620,49 +630,22 @@
     </div>
 
     <div id="view-debt" class="planner-page hidden">
-        <div class="column-title">Debt & payoff tracker</div><p class="scope-note">Set a start month and number of monthly payments for each debt. The final month is included. After that, the expense stops and the record stays here. These are scheduled estimates, not confirmations from your lender.</p><div id="debt-summary" class="debt-summary"></div><div id="debt-plans" class="debt-plans"></div>
-<details class="glass-panel pennie-link"><summary>Pennie Loan setup</summary><p class="scope-note">Link Pennie to its existing bill so it is counted once. Or add a separate Pennie bill if it is not already in the screenshot.</p><label for="pennie-link">Existing monthly bill</label><select id="pennie-link"></select><button id="link-pennie" class="btn btn-primary">Link selected bill</button><button id="add-pennie" class="btn">Add separate Pennie bill</button><p id="pennie-link-note" class="note"></p></details>
-        
-        <div id="pennie-model" class="debt-card glass-panel" style="border-top: 5px solid var(--primary); margin-bottom: 25px; padding: 30px;">
-            <div class="debt-header-wrap">
-                <div class="debt-title-box">
-                    <strong style="font-size: 1.6rem; line-height: 1.3; display: block;">Pennie Consolidation Loan</strong>
-                    <div style="font-size: 0.9rem; color: var(--text-sub); margin-top: 8px; line-height: 1.5;">Set the linked Pennie bill’s first month and payment count above. Projection uses its remaining scheduled payments, excluding interest. The extra-payment slider is a simulation and does not change your schedule. Historical reference from the previous planner: $120,000 original principal, consolidated to $63,000, with $3,666.56 previously paid.</div>
-                </div>
-                <div class="debt-val-box">
-                    <span style="font-size: 0.8rem; color: var(--text-sub); text-transform: uppercase; font-weight: 800; letter-spacing: 0.5px;">Remaining scheduled amount</span><br>
-                    <span style="font-weight:800; color:var(--primary); font-size: 2.6rem; font-family: 'JetBrains Mono', monospace;" id="pennie-live-balance">$63,000</span>
-                </div>
-            </div>
-            
-            <div class="energy-progress-container" style="margin: 25px 0;">
-                <div class="energy-progress-bar" id="pennie-progress" style="width: 0%;"></div>
-            </div>
-            
-            <div style="display:flex; justify-content:space-between; font-size: 0.85rem; color: var(--text-sub); font-weight: 800; text-transform: uppercase;">
-                <span id="pennie-total-label">Schedule not set</span>
-                <span id="pennie-paid" style="color: var(--success);">Paid: $0</span>
-            </div>
-            
-            <div class="slider-container">
-                <strong style="font-size: 1.1rem; color: var(--text-main); display: flex; align-items: center; gap: 8px;">⚡ SNOWBALL ACCELERATOR</strong>
-                <p style="font-size: 0.85rem; color: var(--text-sub); margin-top: 5px;">Slide to simulate adding extra surplus cash every month.</p>
-                <div style="display:flex; justify-content:space-between; font-weight:800; font-family:'JetBrains Mono', monospace; margin-top: 15px; color: var(--text-sub);">
-                    <span>+$0</span><span id="slider-display" style="color:var(--primary); font-size:1.3rem;">+$0 /mo</span><span>+$2,000</span>
-                </div>
-                <input type="range" id="debt-slider" min="0" max="2000" step="50" value="0" oninput="updateSnowball()">
-                <div id="snowball-result" style="background: #fff; padding: 15px; border-radius: 12px; font-weight: 700; margin-top: 15px; border: 1px solid var(--border); font-size: 0.95rem; line-height: 1.4;">
-                    Base Timeline: At $1,400/mo, you will be debt-free in ~43 months.
-                </div>
-            </div>
-        </div>
+        <div class="forecast-toolbar"><h2 class="column-title">Debt</h2><button type="button" class="btn btn-primary" id="add-debt">Add debt</button></div>
+        <div id="debt-summary" class="debt-summary" hidden></div>
+        <div id="debt-plans" class="debt-plans"></div>
     </div>
 </div>
 
 
+<dialog id="forecast-day-dialog" aria-labelledby="forecast-day-title">
+    <h2 id="forecast-day-title"></h2>
+    <p id="forecast-day-balance"></p>
+    <div id="forecast-day-events"></div>
+    <form method="dialog" class="dialog-actions"><button class="primary">Close</button></form>
+</dialog>
 <dialog id="account-dialog"><form id="account-form"><h2>Update account balances</h2><label class="field">Checking balance ($)<input id="checking-input" type="number" step="0.01" required></label><label class="field">Savings balance ($)<input id="savings-input" type="number" min="0" step="0.01" required></label><label class="field">Balances as of<input id="account-asof" type="date" required></label><p class="note">Enter the balances already showing at your bank. Forecast applies later scheduled activity. Plans on this date are treated as additional moves after this snapshot.</p><div class="dialog-actions"><button type="button" onclick="document.getElementById('account-dialog').close()">Cancel</button><button class="primary">Save balances</button></div></form></dialog>
 <dialog id="transfer-dialog"><form id="transfer-form"><h2>Plan savings → checking</h2><p class="note">This is a forecast only. It does not move money at your bank or count as new income. Reported balances stay unchanged.</p><label class="field">Transfer amount ($)<input id="transfer-amount" type="number" min="0.01" step="0.01" required></label><label class="field">Planned date<input id="transfer-date" type="date" required></label><p class="note" id="transfer-available"></p><p id="transfer-error" role="alert" class="negative"></p><div class="dialog-actions"><button type="button" onclick="document.getElementById('transfer-dialog').close()">Cancel</button><button class="primary">Add to forecast</button></div></form></dialog>
-<dialog id="bill-dialog"><form id="bill-form"><h2 id="dialog-title">Edit bill</h2><label class="field">Bill name<input id="bill-name" required maxlength="100"></label><label class="field">Due day<input id="bill-day" type="number" min="1" max="31" required></label><label class="field">Full monthly amount ($)<input id="bill-amount" type="number" min="0" max="10000000" step="0.01" required></label><label class="field">Who pays<select id="bill-owner"><option value="nick">Nick</option><option value="kiana">Kiana</option><option value="split">Split 50/50</option></select></label><label class="field">Payment type<select id="bill-kind"><option value="regular">Ongoing bill</option><option value="settled">Settled payment</option><option value="pennie">Pennie Loan</option><option value="loan">Other loan / fixed term</option></select></label><div id="term-fields"><label class="field">First payment month<input id="bill-start" type="month" min="2000-01" max="2100-12"></label><label class="field">Number of monthly payments<input id="bill-months" type="number" min="1" max="1200" step="1" placeholder="e.g. 12"></label><p class="note" id="term-preview">Leave the month count blank until you know it. The bill will stay active.</p></div><div class="dialog-actions"><button type="button" id="cancel-bill">Cancel</button><button class="primary">Save bill</button></div></form></dialog>
+<dialog id="bill-dialog"><form id="bill-form"><h2 id="dialog-title">Edit bill</h2><label class="field">Bill name<input id="bill-name" required maxlength="100"></label><label class="field">Due day<input id="bill-day" type="number" min="1" max="31" required></label><label class="field">Full monthly amount ($)<input id="bill-amount" type="number" min="0" max="10000000" step="0.01" required></label><label class="field">Who pays<select id="bill-owner"><option value="nick">Nick</option><option value="kiana">Kiana</option><option value="split">Split 50/50</option></select></label><label class="field">Payment type<select id="bill-kind"><option value="regular">Ongoing bill</option><option value="settled">Settled payment</option><option value="pennie">Pennie Loan</option><option value="loan">Loan / fixed-term payment</option></select></label><div id="term-fields"><label class="field">First payment month<input id="bill-start" type="month" min="2000-01" max="2100-12"></label><label class="field">Number of monthly payments<input id="bill-months" type="number" min="1" max="1200" step="1" placeholder="e.g. 12"></label><p class="note" id="term-preview">Leave the month count blank until you know it. The bill will stay active.</p></div><div class="dialog-actions"><button type="button" id="cancel-bill">Cancel</button><button class="primary">Save bill</button></div></form></dialog>
 <dialog id="edit-tip-dialog">
     <form id="edit-tip-form">
         <h2>Edit tip</h2>
@@ -756,7 +739,7 @@ const SEED={bills:[
     const hasTerm=b=>b.kind!=='regular'&&Number.isInteger(b.termMonths)&&b.termMonths>0&&Number.isFinite(monthNumber(b.startMonth));
     const planStatus=(b,m=budgetMonth)=>!hasTerm(b)?'needs-term':monthNumber(m)<monthNumber(b.startMonth)?'upcoming':monthNumber(m)>=monthNumber(b.startMonth)+b.termMonths?'finished':'active';
     const billActive=(b,m=budgetMonth)=>!hasTerm(b)||['active'].includes(planStatus(b,m));
-    const isDebt=b=>['settled','pennie','loan'].includes(b.kind)||/settled|loan/i.test(b.name);
+    const isDebt=b=>b.kind!=='regular'&&(b.trackDebt===true||hasTerm(b));
 
     let scopeBalances={nick:realStartBal,kiana:0,household:realStartBal};
     try { const saved=JSON.parse(localStorage.getItem('apexScopeBalancesV1')); if(saved&&['nick','kiana','household'].every(k=>Number.isFinite(saved[k])))scopeBalances=saved; } catch(e) {}
@@ -815,10 +798,8 @@ const SEED={bills:[
     let chartInstance = null;
     let chartLabels = [];
     let chartDataBalance = [];
-    let chartDataDebt = [];
     let chartDataDanger = [];
     
-    let penniePaidSoFar = 3666.56;
 
     // UI Animation Helper
     function triggerPop(id) {
@@ -910,7 +891,6 @@ const SEED={bills:[
         let baseExpStr = document.getElementById('sum-exp').innerText;
         let liveBalStr = document.getElementById('live-balance').innerText;
         let surplusStr = document.getElementById('sum-surplus').innerText;
-        let pennieBal=pennieSchedule().configured?pennieSchedule().remainingAmount.toLocaleString(undefined,{maximumFractionDigits:0}):'Schedule not set';
 
         // Filter custom ledger for the CURRENT MONTH
         let today = new Date(Number(budgetMonth.slice(0,4)),Number(budgetMonth.slice(5))-1,1);
@@ -965,10 +945,6 @@ const SEED={bills:[
                         <div style="font-size: 9px; color: #64748b; text-transform: uppercase; font-weight: bold; margin-bottom: 4px;">Left Over / Mo</div>
                         <div style="font-size: 17px; color: ${surplusStr.trim().charAt(0) === '-' ? '#f43f5e' : '#10b981'}; font-weight: bold;">${surplusStr}</div>
                     </td>
-                    <td style="background: #f8fafc; border: 1px solid #e2e8f0; border-top: 3px solid #f59e0b; padding: 10px; width: 20%; border-radius: 6px;">
-                        <div style="font-size: 9px; color: #64748b; text-transform: uppercase; font-weight: bold; margin-bottom: 4px;">Debt Eliminated</div>
-                        <div style="font-size: 17px; color: #f59e0b; font-weight: bold;">$${penniePaidSoFar.toLocaleString(undefined, {maximumFractionDigits:0})}</div>
-                    </td>
                 </tr>
             </table>
 
@@ -981,15 +957,6 @@ const SEED={bills:[
             <table width="100%" style="margin-bottom: 20px; border-collapse: collapse;">
                 <tr>
                     <td style="width: 48%; vertical-align: top; padding-right: 2%;">
-                        <h2 style="font-size: 13px; color: #1e293b; text-transform: uppercase; border-bottom: 1px solid #e2e8f0; padding-bottom: 4px; margin-bottom: 8px;">Debt Debt & payoff tracker</h2>
-                        <table width="100%" style="border-collapse: collapse; font-size: 12px; margin-bottom: 15px;">
-                            <tr style="border-bottom: 1px solid #f1f5f9;">
-                                <td style="padding: 6px 0;"><strong>Pennie Consolidation Loan</strong></td>
-                                <td style="padding: 6px 0; text-align: right; color: #4f46e5; font-weight: bold;">$${pennieBal}</td>
-                            </tr>
-                            ${expenses.filter(e=>/loan|settled|best buy/i.test(e.name)).map(e=>`<tr><td style="padding:6px 0">${safeText(e.name)}</td><td style="text-align:right">$${e.amt.toLocaleString()}/mo</td></tr>`).join('')}
-                        </table>
-
                         <h2 style="font-size: 13px; color: #1e293b; text-transform: uppercase; border-bottom: 1px solid #e2e8f0; padding-bottom: 4px; margin-bottom: 8px;">Goal Vaults</h2>
                         <table width="100%" style="border-collapse: collapse; font-size: 12px;">
                             ${vaults.map(v => `
@@ -1112,14 +1079,26 @@ const SEED={bills:[
     document.getElementById('forecast-month').onchange=e=>showForecastMonth(Number(e.target.value));
     document.getElementById('forecast-prev').onclick=()=>showForecastMonth(selectedForecastMonth-1);
     document.getElementById('forecast-next').onclick=()=>showForecastMonth(selectedForecastMonth+1);
+    document.getElementById('calendar-body').onclick=e=>{
+        const button=e.target.closest('.forecast-day');
+        if(!button)return;
+        document.getElementById('forecast-day-title').textContent=button.dataset.day;
+        document.getElementById('forecast-day-balance').textContent=button.dataset.balance==='--'
+            ? 'Projected balance unavailable before the account snapshot.'
+            : 'Projected checking balance '+button.dataset.balance;
+        const events=button.parentElement.querySelector('template').content.cloneNode(true);
+        document.getElementById('forecast-day-events').replaceChildren(
+            events.hasChildNodes()?events:'No scheduled activity.'
+        );
+        document.getElementById('forecast-day-dialog').showModal();
+    };
 
     function refreshChart(){
         if(!chartInstance){initChart();return;}
         if(!chartNeedsUpdate)return;
         chartInstance.data.labels=chartLabels;
         chartInstance.data.datasets[0].data=chartDataBalance;
-        chartInstance.data.datasets[1].data=chartDataDebt;
-        chartInstance.data.datasets[2].data=chartDataDanger;
+        chartInstance.data.datasets[1].data=chartDataDanger;
         chartInstance.update('none');
         chartNeedsUpdate=false;
     }
@@ -1232,38 +1211,16 @@ const SEED={bills:[
         }
     }
 
-    window.updateSnowball = function() {
-        let extra = parseInt(document.getElementById('debt-slider').value);
-        document.getElementById('slider-display').innerText = "+$" + extra.toLocaleString() + " /mo";
-        const plan=pennieSchedule();
-        let rem=plan.configured?plan.remainingAmount:0;
-        let basePayment=plan.configured?plan.payment:0;
-        let baseMonths = basePayment>0 ? Math.ceil(rem / basePayment) : Infinity;
-        let newMonths = basePayment+extra>0 ? Math.ceil(rem / (basePayment + extra)) : Infinity;
-        let resultEl = document.getElementById('snowball-result');
-        if(extra === 0) {
-            resultEl.innerHTML = `Base Timeline: At $${basePayment.toLocaleString()}/mo in linked Pennie payments, estimated payoff is <strong>${Number.isFinite(baseMonths)?baseMonths+" months":"not available (link Pennie and set its payment months)"}</strong>.`;
-            resultEl.style.background = "#fff"; resultEl.style.color = "var(--text-main)"; resultEl.style.borderColor = "var(--border)";
-        } else {
-            resultEl.innerHTML = `⚡ <strong>ACCELERATOR:</strong> Payoff drops to <strong>${newMonths} months</strong>! You save <strong>${Number.isFinite(baseMonths)?baseMonths-newMonths:"—"} months</strong> of debt.`;
-            resultEl.style.background = "var(--primary-light)"; resultEl.style.color = "var(--primary)"; resultEl.style.borderColor = "var(--primary)";
-        }
-    }
-
     // THE QUANTUM ENGINE
     function runEngine() {
         startBal=selectedAccount().checking;
         const forecastAnchor=parseBudgetDate(selectedAccount().asOf);
         const expenses=scopedExpenses(), customLedger=scopedLedger(), vaults=scopedVaults();
-        document.getElementById('pennie-model').classList.toggle('hidden',budgetView==='kiana');
         document.getElementById('forecast-opening').innerText=accountMoney(startBal)+' as of '+selectedAccount().asOf;
         document.getElementById('forecast-anchor-note').textContent='Forecast starts after the '+selectedAccount().asOf+' balance snapshot. Earlier bills and income are not charged again. Same-day transfer plans are additional moves after this snapshot.';
         const personEnabled=owner=>budgetView==='household'||budgetView===owner;
         renderFront();
-        chartLabels = []; chartDataBalance = []; chartDataDebt = []; chartDataDanger = [];
-        const penniePlan=pennieSchedule();
-        penniePaidSoFar=penniePlan.configured?penniePlan.completedAmount:0;
-        let loopPennieDebt=penniePlan.configured?penniePlan.remainingAmount:0;
+        chartLabels = []; chartDataBalance = []; chartDataDanger = [];
         
         let nickAmt = personEnabled('nick') ? incomes.find(i=>i.id==='nick').amt : 0;
         let vaAmt = personEnabled('nick') ? incomes.find(i=>i.id==='va').amt : 0;
@@ -1435,21 +1392,21 @@ const SEED={bills:[
                 let isPast = iterDate < normToday;
 
                 let incTotal = 0;
-                let eventsHTML = "";
+                const dayEvents=[];
                 
                 if (personEnabled('nick') && i === 1) {
                     incTotal += vaAmt; 
-                    eventsHTML += `<div class="event ev-inc">+VA Pay $${Math.round(vaAmt)}</div>`;
+                    dayEvents.push(`<div class="event ev-inc">+VA Pay $${Math.round(vaAmt)}</div>`);
                 }
                 if (personEnabled('nick') && Math.round((iterDate - nickAnchorDate) / 86400000) >= 0 && Math.round((iterDate - nickAnchorDate) / 86400000) % 14 === 0) {
                     incTotal += nickAmt;
                     let nm = incomes.find(inc=>inc.id==='nick').name.replace(' (Bi-Weekly)','');
-                    eventsHTML += `<div class="event ev-inc">+${nm} $${Math.round(nickAmt)}</div>`;
+                    dayEvents.push(`<div class="event ev-inc">+${nm} $${Math.round(nickAmt)}</div>`);
                 }
                 if (personEnabled('kiana') && Math.round((iterDate - kianaAnchorDate) / 86400000) >= 0 && Math.round((iterDate - kianaAnchorDate) / 86400000) % 7 === 0) {
                     incTotal += kianaAmt;
                     let km = incomes.find(inc=>inc.id==='kiana').name.replace(' (Weekly)','');
-                    eventsHTML += `<div class="event ev-inc">+${km} $${Math.round(kianaAmt)}</div>`;
+                    dayEvents.push(`<div class="event ev-inc">+${km} $${Math.round(kianaAmt)}</div>`);
                 }
                 
                 let dExp = expenses.filter(x => x.day === i).map(x => ({...x}));
@@ -1461,7 +1418,7 @@ const SEED={bills:[
                 
                 dExp.forEach(e => {
                     let dName = e.name.replace("'s CC", " CC");
-                    eventsHTML += `<div class="event ev-exp">-${safeText(dName)} $${Math.round(e.amt)}</div>`;
+                    dayEvents.push(`<div class="event ev-exp">-${safeText(dName)} $${Math.round(e.amt)}</div>`);
                 });
 
                 let expTotal = dExp.reduce((s, x) => s + x.amt, 0);
@@ -1470,13 +1427,13 @@ const SEED={bills:[
                 let cLedger = entriesOn(dateStr);
                 cLedger.forEach(c => {
                     let cName = c.name.replace(" Extra", "+");
-                    eventsHTML += `<div class="event ev-custom">-${safeText(cName)} $${Math.round(c.amt)}</div>`;
+                    dayEvents.push(`<div class="event ev-custom">-${safeText(cName)} $${Math.round(c.amt)}</div>`);
                 });
                 let custTotal = cLedger.reduce((s, x) => s + x.amt, 0);
                 expTotal += custTotal;
 
                 const plannedTransfer=transferAmountOn(dateStr);
-                if(plannedTransfer)eventsHTML+=`<div class="event ev-custom">+From savings $${plannedTransfer.toLocaleString()}</div>`;
+                if(plannedTransfer)dayEvents.push(`<div class="event ev-custom">+From savings $${plannedTransfer.toLocaleString()}</div>`);
                 let displayBal = "--";
 
                 // MATH CALCULATIONS
@@ -1484,10 +1441,6 @@ const SEED={bills:[
                     if (isMathAnchorDay) bal=startBal+transferAmountOn(dateStr);
                     else bal=bal+incTotal-expTotal+transferAmountOn(dateStr);
                     displayBal=accountMoney(bal);
-
-                    let pBase = dExp.filter(x => x.kind==='pennie').reduce((s, x) => s + x.amt, 0);
-                    let pCust = cLedger.filter(x => /pennie/i.test(x.name)).reduce((s, x) => s + x.amt, 0);
-                    if(!isMathAnchorDay) loopPennieDebt = Math.max(0,loopPennieDebt - pBase - pCust);
 
                     if(bal < minGlobalBalance) { minGlobalBalance = bal; minGlobalDate = `${monthPrefix} ${i}, ${yearNum}`; }
                     
@@ -1497,11 +1450,20 @@ const SEED={bills:[
                     }
                     chartLabels.push(`${monthPrefix} ${i}`); 
                     chartDataBalance.push(bal); 
-                    chartDataDebt.push(penniePlan.configured?Math.max(0,loopPennieDebt):null);
                     chartDataDanger.push(4000); 
                 }
                 
-                mHtml += `<div class="cal-day glass-panel ${isPast ? 'past' : ''}"><div class="cal-num">${i}</div><div>${eventsHTML}</div><div style="margin-top:auto;"><div class="cal-bal">${displayBal}</div></div></div>`;
+                const activity=dayEvents.length;
+                const dateLabel=monthPrefix+' '+i+', '+yearNum;
+                mHtml += `<div class="cal-day ${isPast?'past':''}">
+                    <button type="button" class="forecast-day" data-day="${dateLabel}" data-balance="${displayBal}"
+                        aria-label="${dateLabel}, ${activity} ${activity===1?'entry':'entries'}, view details">
+                        <span class="cal-num">${i}</span>
+                        ${activity?`<span class="day-count">${activity}<span class="day-count-label"> ${activity===1?'entry':'entries'}</span></span>`:''}
+                        <span class="cal-bal">${displayBal}</span>
+                    </button>
+                    <template>${dayEvents.join('')}</template>
+                </div>`;
             }
             return mHtml + `</div></div>`; 
         }
@@ -1524,15 +1486,6 @@ const SEED={bills:[
         // Apply Top Numbers w/ Animations
         let balStr=accountMoney(liveEstimatedBalance);
         if(document.getElementById('live-balance').innerText !== balStr) { document.getElementById('live-balance').innerText = balStr; triggerPop('live-balance'); }
-        
-        document.getElementById('pennie-live-balance').innerText=penniePlan.configured?'$'+penniePlan.remainingAmount.toLocaleString():'Set payment months';
-        document.getElementById('pennie-total-label').innerText=penniePlan.configured?'Total schedule: $'+penniePlan.totalAmount.toLocaleString():'Schedule not set';
-        let paidStr = "$" + penniePaidSoFar.toLocaleString(undefined, {maximumFractionDigits: 0});
-        if(document.getElementById('sum-debt-paid').innerText !== paidStr) { document.getElementById('sum-debt-paid').innerText = paidStr; triggerPop('sum-debt-paid'); }
-        
-        document.getElementById('pennie-paid').innerText = "Scheduled before this month: $" + penniePaidSoFar.toLocaleString(undefined, {minimumFractionDigits: 2});
-        document.getElementById('pennie-progress').style.width = (penniePlan.totalAmount?Math.min(penniePaidSoFar/penniePlan.totalAmount*100,100):0) + "%";
-        updateSnowball(); 
         
         // Alert Banner & HUD AI Status
         const alertBanner = document.getElementById('alert-banner');
@@ -1565,7 +1518,6 @@ const SEED={bills:[
                 labels: chartLabels, 
                 datasets: [
                     { label: 'Bank Balance', data: chartDataBalance, borderColor: '#4f46e5', backgroundColor: gradient, borderWidth: 3, pointRadius: 0, fill: true, tension: 0.4, yAxisID: 'y' },
-                    { label: 'Pennie scheduled amount', data: chartDataDebt, borderColor: '#f43f5e', backgroundColor: 'transparent', borderWidth: 3, pointRadius: 0, fill: false, tension: 0.4, yAxisID: 'y1' },
                     { label: 'Danger Zone ($4k)', data: chartDataDanger, borderColor: '#f59e0b', borderDash: [5, 5], borderWidth: 2, pointRadius: 0, fill: false, tension: 0, yAxisID: 'y' }
                 ] 
             },
@@ -1578,7 +1530,6 @@ const SEED={bills:[
                 }, 
                 scales: { 
                     y: { type: 'linear', display: true, position: 'left', grid: { color: 'rgba(0,0,0,0.05)' }, ticks: { color: '#64748b', font: {family: "'JetBrains Mono', monospace"} } }, 
-                    y1: { type: 'linear', display: true, position: 'right', grid: { drawOnChartArea: false }, ticks: { color: '#f43f5e', font: {family: "'JetBrains Mono', monospace"} } },
                     x: { grid: { display: false }, ticks: { color: '#64748b', maxTicksLimit: 12 } } 
                 } 
             }
@@ -1633,12 +1584,14 @@ const SEED={bills:[
             renderDebtPlans();
         };
         function save(){saveData();runEngine();$('save-status').textContent=isSandbox?'Sandbox — changes are temporary':'Saved on this device';}
-        function openBill(id=null){editingBill=id;const b=expenses.find(x=>x.id===id)||{name:'',day:1,amt:'',owner:budgetView==='kiana'?'kiana':'nick'};$('dialog-title').textContent=id===null?'Add bill':'Edit bill';$('bill-name').value=b.name;$('bill-day').value=b.day;$('bill-amount').value=b.amt;$('bill-owner').value=b.owner;$('bill-kind').value=b.kind||(/settled/i.test(b.name)?'settled':/loan/i.test(b.name)?'loan':'regular');$('bill-start').value=b.startMonth||budgetMonth;$('bill-months').value=b.termMonths||'';window.updateTermPreview();$('bill-dialog').showModal();}
+        let addingDebt=false;
+        function openBill(id=null,addDebt=false){editingBill=id;addingDebt=addDebt;const b=expenses.find(x=>x.id===id)||{name:'',day:1,amt:'',owner:budgetView==='kiana'?'kiana':'nick',kind:addDebt?'loan':'regular'};$('dialog-title').textContent=id===null?(addDebt?'Add debt':'Add bill'):'Edit bill';$('bill-name').value=b.name;$('bill-day').value=b.day;$('bill-amount').value=b.amt;$('bill-owner').value=b.owner;$('bill-kind').value=b.kind||(/settled/i.test(b.name)?'settled':/loan/i.test(b.name)?'loan':'regular');$('bill-start').value=b.startMonth||budgetMonth;$('bill-months').value=b.termMonths||'';window.updateTermPreview();$('bill-dialog').showModal();}
         window.openBudgetBill=openBill;
+        $('add-debt').onclick=()=>openBill(null,true);
         document.querySelectorAll('[data-view]').forEach(b=>b.onclick=()=>setView(b.dataset.view));$('add-bill').onclick=()=>openBill();$('cancel-bill').onclick=()=>$('bill-dialog').close();$('cancel-income').onclick=()=>$('income-dialog').close();
         $('bills').onclick=e=>{const edit=e.target.closest('[data-edit]'),remove=e.target.closest('[data-remove]');if(edit)openBill(edit.dataset.edit);if(remove){const b=expenses.find(b=>b.id===remove.dataset.remove);if(confirm('Remove '+b.name+'?')){expenses.splice(expenses.indexOf(b),1);save();}}};
         $('bills').onchange=e=>{if(e.target.matches('[data-owner]')){expenses.find(b=>b.id===e.target.dataset.owner).owner=e.target.value;save();}};
-        $('bill-form').onsubmit=e=>{e.preventDefault();let amt=Number($('bill-amount').value),day=Number($('bill-day').value),name=$('bill-name').value.trim();if(!name||!Number.isFinite(amt)||amt<0||amt>1e7||!Number.isInteger(day)||day<1||day>31)return;const data={id:editingBill??('bill-'+Date.now()+'-'+Math.random().toString(36).slice(2)),name,day,amt,owner:$('bill-owner').value,kind:$('bill-kind').value,startMonth:$('bill-start').value,termMonths:$('bill-months').value?Number($('bill-months').value):null};if(data.termMonths!==null&&(!Number.isInteger(data.termMonths)||data.termMonths<1||data.termMonths>1200||!Number.isFinite(monthNumber(data.startMonth))))return;const i=expenses.findIndex(b=>b.id===editingBill);if(i<0)expenses.push(data);else expenses[i]=data;if(data.kind==='pennie')expenses.forEach(b=>{if(b.id!==data.id&&b.kind==='pennie')b.kind='loan';});save();$('bill-dialog').close();};
+        $('bill-form').onsubmit=e=>{e.preventDefault();let amt=Number($('bill-amount').value),day=Number($('bill-day').value),name=$('bill-name').value.trim();if(!name||!Number.isFinite(amt)||amt<0||amt>1e7||!Number.isInteger(day)||day<1||day>31)return;const data={id:editingBill??('bill-'+Date.now()+'-'+Math.random().toString(36).slice(2)),name,day,amt,owner:$('bill-owner').value,kind:$('bill-kind').value,startMonth:$('bill-start').value,termMonths:$('bill-months').value?Number($('bill-months').value):null};if(data.termMonths!==null&&(!Number.isInteger(data.termMonths)||data.termMonths<1||data.termMonths>1200||!Number.isFinite(monthNumber(data.startMonth))))return;const i=expenses.findIndex(b=>b.id===editingBill);data.trackDebt=data.kind!=='regular'&&(addingDebt||expenses[i]?.trackDebt===true||data.kind!==expenses[i]?.kind);if(i<0)expenses.push(data);else expenses[i]=data;if(data.kind==='pennie')expenses.forEach(b=>{if(b.id!==data.id&&b.kind==='pennie')b.kind='loan';});save();$('bill-dialog').close();};
         const kianaIncome=()=>incomes.find(income=>income.id==='kiana');
         function renderDashboardTips(){
             const tips=tipPlan(kianaIncome());
@@ -1884,29 +1837,21 @@ const SEED={bills:[
         };
     })();
 
-    function pennieSchedule(){
-        const bill=expenses.find(b=>b.kind==='pennie'&&(budgetView==='household'||(b.owner||'nick')===budgetView||b.owner==='split'));
-        if(!bill||!hasTerm(bill))return{configured:false};
-        const elapsed=Math.max(0,Math.min(bill.termMonths,monthNumber(budgetMonth)-monthNumber(bill.startMonth))),payment=shareAmount(bill);
-        return{configured:true,payment,totalAmount:payment*bill.termMonths,completedAmount:payment*elapsed,remainingAmount:payment*(bill.termMonths-elapsed)};
-    }
     function renderDebtPlans(){
         const money=n=>new Intl.NumberFormat('en-US',{style:'currency',currency:'USD',maximumFractionDigits:2}).format(n);
         const debts=expenses.filter(b=>isDebt(b)&&(budgetView==='household'||(b.owner||'nick')===budgetView||b.owner==='split'));
         const finished=debts.filter(b=>planStatus(b)==='finished');
         const current=debts.filter(b=>billActive(b)).reduce((n,b)=>n+shareAmount(b),0);
         const released=finished.reduce((n,b)=>n+shareAmount(b),0);
+        document.getElementById('debt-summary').hidden=!debts.length;
         document.getElementById('debt-summary').innerHTML=`<div><span class="label">Active monthly debt payments</span><strong>${money(current)}</strong></div><div><span class="label">Finished schedules</span><strong>${finished.length}</strong></div><div><span class="label">Monthly room freed up</span><strong class="green">${money(released)}</strong></div>`;
         document.getElementById('debt-plans').innerHTML=debts.map(b=>{
             const status=planStatus(b),configured=hasTerm(b),elapsed=configured?Math.max(0,Math.min(b.termMonths,monthNumber(budgetMonth)-monthNumber(b.startMonth))):0,remaining=configured?b.termMonths-elapsed:null;
             const final=configured?addMonths(b.startMonth,b.termMonths-1):'Not set';
             const label=status==='finished'?'Paid off · scheduled':status==='needs-term'?'Set duration':status==='upcoming'?'Starts later':'In progress';
-            const name=b.kind==='pennie'?'Pennie Loan':b.name;
-            return `<article class="debt-plan ${status==='finished'?'finished':''}"><span class="badge">${label}</span><h3>${safeText(name)}</h3>${b.kind==='pennie'&&b.name!=='Pennie Loan'?'<p class="note">Linked to '+safeText(b.name)+' · counted once</p>':''}<p class="debt-payment">${money(shareAmount(b))} / month</p><details><summary>Schedule details</summary><dl><dt>First payment</dt><dd>${configured?safeText(b.startMonth):'Not set'}</dd><dt>Final payment</dt><dd>${final}</dd><dt>Payments remaining</dt><dd>${remaining===null?'Not set':remaining}</dd><dt>Scheduled amount remaining</dt><dd>${remaining===null?'Not set':money(remaining*shareAmount(b))}</dd></dl>${configured?'<div class="progress"><span style="width:'+elapsed/b.termMonths*100+'%"></span></div>':''}<p class="note">${status==='finished'?'Removed from expenses after '+final+'. Your history is kept.':status==='needs-term'?'Keeps counting as an expense until you set its month count.':'Includes the selected month when a payment is due. Schedule totals assume each payment is made.'}</p></details><button data-debt-edit="${safeText(b.id)}">${configured?'Edit schedule':'Set payment months'}</button></article>`;
-        }).join('')||'<div class="glass-panel" style="padding:22px">No debt payments assigned in this view.</div>';
-        const linked=expenses.find(b=>b.kind==='pennie');
-        document.getElementById('pennie-link').innerHTML='<option value="">Choose the existing Pennie bill…</option>'+expenses.filter(b=>(b.owner||'nick')==='nick'||b.owner==='split').map(b=>`<option value="${safeText(b.id)}" ${linked&&linked.id===b.id?'selected':''}>${safeText(b.name)} · ${money(b.amt)}/mo</option>`).join('');
-        document.getElementById('pennie-link-note').textContent=linked?'Linked to '+linked.name+'. Edit its schedule above to set how many payments remain.':'Pennie is not linked yet. Existing screenshot loan bills remain unchanged until you identify the right one.';
+            const name=b.name;
+            return `<article class="debt-plan ${status==='finished'?'finished':''}"><span class="badge">${label}</span><h3>${safeText(name)}</h3><p class="debt-payment">${money(shareAmount(b))} / month</p><details><summary>Schedule details</summary><dl><dt>First payment</dt><dd>${configured?safeText(b.startMonth):'Not set'}</dd><dt>Final payment</dt><dd>${final}</dd><dt>Payments remaining</dt><dd>${remaining===null?'Not set':remaining}</dd><dt>Scheduled amount remaining</dt><dd>${remaining===null?'Not set':money(remaining*shareAmount(b))}</dd></dl>${configured?'<div class="progress"><span style="width:'+elapsed/b.termMonths*100+'%"></span></div>':''}<p class="note">${status==='finished'?'Removed from expenses after '+final+'. Your history is kept.':status==='needs-term'?'Keeps counting as an expense until you set its month count.':'Includes the selected month when a payment is due. Schedule totals assume each payment is made.'}</p></details><button data-debt-edit="${safeText(b.id)}">${configured?'Edit schedule':'Set payment months'}</button></article>`;
+        }).join('')||'<div class="glass-panel" style="padding:22px">No debts added for this view.</div>';
     }
     window.updateTermPreview=()=>{
         const kind=document.getElementById('bill-kind').value,months=Number(document.getElementById('bill-months').value),start=document.getElementById('bill-start').value;
@@ -1918,11 +1863,6 @@ const SEED={bills:[
     document.getElementById('bill-months').oninput=window.updateTermPreview;
     document.getElementById('budget-month').onchange=e=>{if(Number.isFinite(monthNumber(e.target.value))){budgetMonth=e.target.value;runEngine();}};
     document.getElementById('debt-plans').onclick=e=>{const button=e.target.closest('[data-debt-edit]');if(button)window.openBudgetBill(button.dataset.debtEdit);};
-    document.getElementById('link-pennie').onclick=()=>{
-        const bill=expenses.find(b=>b.id===document.getElementById('pennie-link').value);if(!bill)return alert('Choose the existing monthly bill for Pennie.');
-        expenses.forEach(b=>{if(b.kind==='pennie')b.kind='loan';});bill.kind='pennie';saveData();runEngine();window.openBudgetBill(bill.id);
-    };
-    document.getElementById('add-pennie').onclick=()=>{window.openBudgetBill();document.getElementById('bill-name').value='Pennie Loan';document.getElementById('bill-kind').value='pennie';window.updateTermPreview();};
     // Keep every tab's data and payoff histories portable across devices.
     window.exportBudgetBackup=()=>{
         const payload={version:2,incomes,expenses,customLedger,vaults,scopeBalances,accounts};
