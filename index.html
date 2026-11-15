@@ -1895,13 +1895,12 @@ const SEED={bills:[
         document.getElementById('account-savings').textContent=hasBalances?accountMoney(a.savings):'Not entered';
         document.getElementById('account-total').textContent=hasBalances?accountMoney(a.checking+a.savings):'Not entered';
         document.getElementById('account-date').textContent=combined
-            ? people.map(([name,account])=>name+': '+(account.specified?dateLabel(account.asOf):'no balances entered')).join(' · ')
-            : a.specified?'As of '+dateLabel(a.asOf):'Add your checking and savings balances to get started.';
-        document.getElementById('account-cushion').textContent=[
-            planned?'Savings after planned transfers: '+accountMoney(a.savings-planned)+'.':'',
-            combined?'Select Nick or Kiana to update balances or plan a transfer.':'',
-        ].filter(Boolean).join(' ');
-        document.getElementById('account-cushion').hidden=!document.getElementById('account-cushion').textContent;
+            ? people.map(([name,account])=>name+': '+(account.specified?dateLabel(account.asOf):'not entered')).join(' · ')
+            : a.specified?'As of '+dateLabel(a.asOf):'';
+        document.getElementById('account-date').hidden=!combined&&!a.specified;
+        const cushion=document.getElementById('account-cushion');
+        cushion.textContent=planned?'Savings after transfers '+accountMoney(a.savings-planned):'';
+        cushion.hidden=!planned;
         document.getElementById('transfer-list').innerHTML=activeTransfers().map(t=>`<div class="transfer-row"><span>${safeText(t.date)} · Savings → checking · ${safeText(t.owner==='nick'?'Nick':'Kiana')}</span><strong>${accountMoney(t.amount)}</strong><button data-cancel-transfer="${safeText(t.id)}" aria-label="Cancel transfer planned for ${safeText(t.date)}">Cancel plan</button></div>`).join('');
         document.getElementById('vault-account-summary').innerHTML=`<h2>Reported savings: ${a.specified?accountMoney(a.savings):'Not entered'}</h2><p class="note">As of ${safeText(a.asOf)} · ${accountMoney(a.savings-planned)} remains after planned transfers. Savings is held separately from checking; the goals below do not add extra money to your account totals.</p><button onclick="openSavingsTransfer()">Plan savings transfer</button>`;
     }
