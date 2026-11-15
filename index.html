@@ -140,9 +140,6 @@
         .btn-primary:hover { background: #4338ca; transform: translateY(-2px); }
 
         /* Command Strips */
-        .month-header-strip { padding: 25px; margin: 40px 0 20px 0; display: flex; flex-direction: column; gap: 20px; border-left: 6px solid var(--primary); }
-        .month-header-top { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; }
-        .month-title { font-size: 1.4rem; font-weight: 800; color: var(--text-main); letter-spacing: 1px; text-transform: uppercase; line-height: 1.2;}
         .cs-chip { padding: 8px 14px; border-radius: 10px; font-size: 0.85rem; font-weight: 800; font-family: 'JetBrains Mono', monospace; background: #fff; border: 1px solid var(--border); box-shadow: 0 2px 5px rgba(0,0,0,0.02); display: flex; align-items: center; gap: 8px;}
         
 
@@ -279,8 +276,6 @@
             .form-row { grid-template-columns: 1fr !important; min-width: 100% !important; width: 100%; gap: 12px; }
             .interactive-card { padding: 15px !important; }
             
-            .month-header-top { flex-direction: column; align-items: flex-start; }
-            .month-stats { flex-direction: column; width: 100%; }
             .cs-chip { justify-content: space-between; padding: 6px 10px;}
         }
         
@@ -409,12 +404,12 @@
 .forecast-toolbar .actions{display:flex;gap:4px}
 .forecast-toolbar .actions button,.forecast-toolbar select{min-height:40px;border:1px solid var(--border);border-radius:8px;background:#fff;padding:5px 10px}
 .forecast-toolbar button:disabled{opacity:.4;cursor:default}
-.forecast-snapshot{padding:10px 14px;margin:0 0 10px}
 .planner-page summary{cursor:pointer;font-weight:650}
-.planner-page .month-header-strip{padding:4px 8px;margin:0 0 6px}
-.planner-page .month-stats{gap:4px;flex-wrap:wrap}
-.planner-page .cs-chip{font-size:11px;padding:3px 5px;border-radius:5px;box-shadow:none}
-.planner-page .month-title{font-size:16px}
+.planner-page .month-stats{display:flex;flex-flow:row nowrap;gap:12px;overflow-x:auto;padding:5px 8px;margin-bottom:6px;background:#fff;border:1px solid var(--border);border-radius:8px}
+#view-calendar .forecast-toolbar{justify-content:flex-start;flex-wrap:wrap;gap:6px}
+#view-calendar .forecast-toolbar .actions{margin-left:auto;flex-wrap:nowrap}
+#show-forecast-snapshot{padding:6px 9px;font-size:12px;min-height:36px}
+.planner-page .cs-chip{display:inline-flex;flex:none;white-space:nowrap;font:12px system-ui,sans-serif;gap:4px;padding:0;border:0;box-shadow:none}
 .planner-page .calendar-wrapper{padding-bottom:6px}
 .planner-page .calendar-grid{grid-template-columns:repeat(7,minmax(0,1fr));min-width:650px;gap:4px}
 .planner-page .cal-day{min-height:54px;padding:5px;border-radius:8px}
@@ -597,13 +592,14 @@
     <div id="view-calendar" class="planner-page hidden">
         <div class="forecast-toolbar">
             <h2 class="column-title">Forecast</h2>
+            <button type="button" id="show-forecast-snapshot">Checking snapshot</button>
             <div class="actions">
                 <button type="button" id="forecast-prev" aria-label="Previous forecast month">‹</button>
                 <select id="forecast-month" aria-label="Forecast month"></select>
                 <button type="button" id="forecast-next" aria-label="Next forecast month">›</button>
             </div>
         </div>
-        <details class="glass-panel forecast-snapshot"><summary>Checking balance snapshot</summary><p class="note" id="forecast-anchor-note">Forecast starts after your reported balance date, so earlier bills and income are not charged again. Savings stays separate unless you plan a transfer.</p><button class="btn btn-primary" onclick="editStartBal()">Update balances</button><span id="forecast-opening" style="margin-left:15px"></span></details><div id="calendar-body"></div>
+        <div id="calendar-body"></div>
     </div>
 
     <div id="view-vault" class="planner-page hidden">
@@ -632,6 +628,15 @@
 </div>
 
 
+<dialog id="forecast-snapshot-dialog" aria-labelledby="forecast-snapshot-title">
+    <h2 id="forecast-snapshot-title">Checking balance snapshot</h2>
+    <strong id="forecast-opening"></strong>
+    <p class="note" id="forecast-anchor-note"></p>
+    <form method="dialog" class="dialog-actions">
+        <button>Close</button>
+        <button type="button" class="primary" id="update-forecast-balances">Update balances</button>
+    </form>
+</dialog>
 <dialog id="forecast-day-dialog" aria-labelledby="forecast-day-title">
     <h2 id="forecast-day-title"></h2>
     <p id="forecast-day-balance"></p>
@@ -1074,6 +1079,12 @@ const SEED={bills:[
     document.getElementById('forecast-month').onchange=e=>showForecastMonth(Number(e.target.value));
     document.getElementById('forecast-prev').onclick=()=>showForecastMonth(selectedForecastMonth-1);
     document.getElementById('forecast-next').onclick=()=>showForecastMonth(selectedForecastMonth+1);
+    const forecastSnapshot=document.getElementById('forecast-snapshot-dialog');
+    document.getElementById('show-forecast-snapshot').onclick=()=>forecastSnapshot.showModal();
+    document.getElementById('update-forecast-balances').onclick=()=>{
+        forecastSnapshot.close();
+        editStartBal();
+    };
     document.getElementById('calendar-body').onclick=e=>{
         const button=e.target.closest('.forecast-day');
         if(!button)return;
@@ -1354,15 +1365,12 @@ const SEED={bills:[
             let utilRatio = exactMonthInc > 0 ? (exactMonthExp / exactMonthInc) * 100 : 0;
             
             let mHtml = `
-                <div class="month-header-strip glass-panel">
-                    <div class="month-header-top">
-                        <div class="month-stats">
-                            <div class="cs-chip">Income used: ${exactMonthInc>0?utilRatio.toFixed(1)+'%':'—'}</div>
-                            <div class="cs-chip" style="color:var(--success)">IN: $${exactMonthInc.toLocaleString(undefined, {maximumFractionDigits:0})}</div>
-                            <div class="cs-chip" style="color:var(--danger)">OUT: $${exactMonthExp.toLocaleString(undefined, {maximumFractionDigits:0})}</div>
-                            ${plannedTransferTotal?`<div class="cs-chip">FROM SAVINGS: $${plannedTransferTotal.toLocaleString()}</div>`:''}<div class="cs-chip" style="background:var(--primary-light); color:var(--primary); border:none;">NET: ${exactNet >= 0 ? '+' : ''}$${exactNet.toLocaleString(undefined, {maximumFractionDigits:0})}</div>
-                        </div>
-                    </div>
+                <div class="month-stats" role="region" aria-label="Forecast monthly totals" tabindex="0">
+                    <span class="cs-chip">In <strong>${accountMoney(exactMonthInc)}</strong></span>
+                    <span class="cs-chip">Out <strong>${accountMoney(exactMonthExp)}</strong></span>
+                    <span class="cs-chip">Net <strong>${accountMoney(exactNet)}</strong></span>
+                    <span class="cs-chip">Income used <strong>${exactMonthInc>0?utilRatio.toFixed(1)+'%':'—'}</strong></span>
+                    ${plannedTransferTotal?`<span class="cs-chip">From savings <strong>${accountMoney(plannedTransferTotal)}</strong></span>`:''}
                 </div>
                 <div class="calendar-wrapper"><div class="calendar-grid">
                 <div class="cal-header">Sun</div><div class="cal-header">Mon</div><div class="cal-header">Tue</div><div class="cal-header">Wed</div><div class="cal-header">Thu</div><div class="cal-header">Fri</div><div class="cal-header">Sat</div>`;
