@@ -436,7 +436,17 @@
 .forecast-day{display:grid;grid-template-columns:1fr auto;gap:2px 4px;align-content:start;width:100%;height:100%;min-height:46px;padding:4px 6px;text-align:left;border:0;border-radius:7px;background:transparent}
 .forecast-day:focus-visible{outline-offset:-3px}
 .forecast-day:hover{background:var(--primary-light)}
-.day-count{background:var(--primary-light);color:var(--primary-dark);font-size:10px;font-weight:750;border-radius:4px;padding:1px 4px}
+.planner-page .cal-header{color:#5144a5;background:#eeecfb;border-radius:5px;padding:3px 0;margin:0}
+.planner-page .cal-day.income{background:#eefaf3;border-color:#c0e8d2}
+.planner-page .cal-day.expense{background:#fff3f5;border-color:#f3cbd1}
+.planner-page .cal-day.transfer,.planner-page .cal-day.mixed{background:#f4f1ff;border-color:#dad1f5}
+.forecast-day[aria-current=date]{box-shadow:inset 0 0 0 2px var(--purple)}
+.forecast-day[aria-current=date] .cal-num{color:var(--purple)}
+.day-markers{display:flex;gap:1px;justify-self:end}
+.day-marker{display:grid;place-items:center;width:14px;height:14px;border-radius:3px;font-size:11px;font-weight:800;line-height:1}
+.day-marker.income{color:#086747;background:#d0f0df}
+.day-marker.expense{color:#9d2444;background:#fbe0e6}
+.day-marker.transfer{color:#5144a5;background:#e6dfff}
 .forecast-day .cal-bal{grid-column:1/-1;margin:0;text-align:left;font-size:11px}
 #forecast-day-events .event{font-size:13px}
 @media(min-width:769px){
@@ -450,7 +460,9 @@
     .forecast-compact-amount{display:inline;font-variant-numeric:tabular-nums}
     .planner-page .calendar-grid{gap:3px}
     .forecast-day{padding:4px}
-    .day-count-label,.forecast-day .cal-bal{display:none}
+    .forecast-day .cal-bal{display:none}
+    .day-markers{grid-column:1/-1;justify-self:start}
+    .day-marker{width:10px!important;height:10px!important;font-size:9px!important}
 }
 </style>
 </head>
@@ -479,7 +491,6 @@
                 <button class="gear-btn glass-panel" onclick="toggleSettings()">⚙️</button>
                 <div id="settings-menu" class="settings-dropdown glass-panel">
                     <button class="btn" onclick="exportBudgetBackup(); toggleSettings();">Save backup</button>
-                    <button class="btn btn-success" style="margin: 0; background: var(--success); color: white;" onclick="forceSaveData(); toggleSettings();">💾 Save Data</button>
                     <button class="btn btn-primary" style="margin: 0;" onclick="downloadPDF(); toggleSettings();">📥 Download PDF</button>
                 </div>
             </div>
@@ -866,14 +877,6 @@ const SEED={bills:[
         localStorage.setItem('apexVaultsV38', JSON.stringify(vaults));
     }
     
-    // Manual Save Button Logic
-    window.forceSaveData = function() {
-        if(isSandbox) return alert("Cannot save while in Sandbox Mode. Toggle off Sandbox to save real data.");
-        saveData();
-        runEngine();
-        alert("System Data Successfully Saved.");
-    }
-
     // CURRENT-MONTH PROPOSAL PDF GENERATOR
     window.downloadPDF = function() {
         const expenses=scopedExpenses(), incomes=scopedIncomes(), customLedger=scopedLedger(), vaults=scopedVaults();
@@ -1456,12 +1459,20 @@ const SEED={bills:[
                 }
                 
                 const activity=dayEvents.length;
+                const markers=[
+                    incTotal!==0&&['income','+','Income'],
+                    (dExp.length>0||cLedger.length>0)&&['expense','−','Bills or transactions'],
+                    plannedTransfer!==0&&['transfer','↔','Savings transfer'],
+                ].filter(Boolean);
+                const dayType=markers.length===1?markers[0][0]:markers.length?'mixed':'';
                 const dateLabel=monthPrefix+' '+i+', '+yearNum;
-                mHtml += `<div class="cal-day ${isPast?'past':''}">
+                const isToday=iterDate.getTime()===normToday.getTime();
+                mHtml += `<div class="cal-day ${isPast?'past':''} ${dayType}">
                     <button type="button" class="forecast-day" data-day="${dateLabel}" data-balance="${displayBal}"
-                        aria-label="${dateLabel}, ${activity} ${activity===1?'entry':'entries'}, view details">
+                        ${isToday?'aria-current="date"':''}
+                        aria-label="${dateLabel}, ${activity} ${activity===1?'entry':'entries'}${markers.length?', '+markers.map(marker=>marker[2]).join(', '):''}, view details">
                         <span class="cal-num">${i}</span>
-                        ${activity?`<span class="day-count">${activity}<span class="day-count-label"> ${activity===1?'entry':'entries'}</span></span>`:''}
+                        ${markers.length?`<span class="day-markers" aria-hidden="true">${markers.map(([type,symbol,label])=>`<span class="day-marker ${type}" title="${label}">${symbol}</span>`).join('')}</span>`:''}
                         <span class="cal-bal">${displayBal}</span>
                     </button>
                     <template>${dayEvents.join('')}</template>
